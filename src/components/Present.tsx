@@ -60,6 +60,7 @@ export function PresentView() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 'Escape' && !(e.target instanceof Element && e.target.closest('[role=dialog]'))) location.hash = '#/'
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') api?.scrollNext()
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') api?.scrollPrev()
       else if (e.key === 'f') void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())

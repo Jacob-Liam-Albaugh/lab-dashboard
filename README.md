@@ -35,7 +35,7 @@ streams its output. `plt.show()` calls are captured as PNGs into the dashboard's
 ## Present
 
 Pin any file, chart or captured figure, then open **Present** for a full-screen slide
-deck. Arrow keys or space move between slides and `f` toggles fullscreen.
+deck. Arrow keys or space move between slides, `f` toggles fullscreen, and `Esc` exits.
 
 ## Notes
 
