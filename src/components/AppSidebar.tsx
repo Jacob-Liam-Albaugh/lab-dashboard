@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRightIcon, FileIcon, FlaskConicalIcon, FolderIcon, MonitorPlayIcon, PlayIcon } from 'lucide-react'
+import { ChevronRightIcon, FileIcon, FolderIcon, MonitorPlayIcon, PlayIcon } from 'lucide-react'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem,
@@ -10,6 +10,17 @@ import { applyPalette, PALETTES } from '@/lib/palette'
 import { href, type Route } from '@/lib/route'
 
 type ProjectRow = { name: string; path: string; exists: boolean }
+
+function LogoIcon() {
+  return (
+    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" />
+      <path d="M12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z" fill="currentColor" />
+      <path d="M19 19L17.5 17.5" />
+      <path d="M15.5 15.5L14.5 14.5" />
+    </svg>
+  )
+}
 
 function Swatch({ colors }: { colors: string[] }) {
   return <span className="flex overflow-hidden rounded-sm ring-1 ring-border">{colors.map((c) => <span key={c} className="size-3" style={{ background: c }} />)}</span>
@@ -70,7 +81,7 @@ export function AppSidebar({ route }: { route: Route }) {
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
-        <a href="#/" className="flex items-center gap-2 px-2 py-1 font-semibold"><FlaskConicalIcon className="size-4" />Lab dashboard</a>
+        <a href="#/" className="flex items-center gap-2 px-2 py-1 font-semibold"><LogoIcon />Lab dashboard</a>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
