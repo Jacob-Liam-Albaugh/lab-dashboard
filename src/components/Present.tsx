@@ -18,6 +18,10 @@ const loaded = fetch('/api/pins').then((r) => r.json()).then((p: Pin[]) => { pin
 const same = (a: Pin, b: Pin) => a.project === b.project && a.path === b.path && a.run === b.run && a.section === b.section
 const pinKey = (p: Pin) => `${p.project}:${p.run}:${p.path}:${p.section}`
 
+let enteredFromApp = false
+addEventListener('hashchange', (e) => { enteredFromApp = new URL(e.newURL).hash === '#/present' })
+const exit = () => (enteredFromApp ? history.back() : (location.hash = '#/'))
+
 async function save(next: Pin[]) {
   await loaded
   pins = next
@@ -78,7 +82,7 @@ export function PresentView() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'Escape' && !(e.target instanceof Element && e.target.closest('[role=dialog]'))) location.hash = '#/'
+      if (e.key === 'Escape' && !(e.target instanceof Element && e.target.closest('[role=dialog]'))) exit()
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') api?.scrollNext()
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') api?.scrollPrev()
       else if (e.key === 'f') void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())
@@ -117,7 +121,7 @@ export function PresentView() {
             </SheetContent>
           </Sheet>
           <Button variant="outline" size="sm" onClick={() => document.documentElement.requestFullscreen()}><ExpandIcon />Fullscreen</Button>
-          <Button variant="ghost" size="sm" nativeButton={false} render={<a href="#/" />}>Exit</Button>
+          <Button variant="ghost" size="sm" onClick={exit}>Exit</Button>
         </div>
       </div>
       <Carousel setApi={setApi} className="relative min-h-0 flex-1" opts={{ watchDrag: false }}>
