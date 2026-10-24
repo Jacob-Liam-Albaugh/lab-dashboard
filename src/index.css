@@ -142,6 +142,19 @@
     --critical: #d03b3b;
 }
 
+[data-palette="darkplus"] {
+    --background: #1e1e1e;
+    --foreground: #d4d4d4;
+    --card: #252526;
+    --muted: #3c3c3c;
+    --muted-foreground: #9d9d9d;
+    --primary: #007acc;
+    --primary-foreground: #ffffff;
+    --ring: #007fd4;
+    --sidebar: #252526;
+    --sidebar-accent: #094771;
+}
+
 [data-palette="olive"] {
     --background: #181c14;
     --foreground: #ecdfcc;

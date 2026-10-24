@@ -6,6 +6,7 @@ export const PALETTES = [
   { id: 'stone', name: 'Stone', dark: false, colors: ['#b6ae9f', '#c5c7bc', '#deded1', '#fbf3d1'] },
   { id: 'pastel', name: 'Pastel', dark: false, colors: ['#fdf4d2', '#b0cde6', '#a290b7', '#946d6d'] },
   { id: 'rosewood', name: 'Rosewood', dark: false, colors: ['#452829', '#57595b', '#e8d1c5', '#f3e8df'] },
+  { id: 'darkplus', name: 'Dark+', dark: true, colors: ['#1e1e1e', '#252526', '#007acc', '#d4d4d4'] },
   { id: 'wine', name: 'Wine', dark: true, colors: ['#2c2c2c', '#853953', '#612d53', '#f3f4f4'] },
   { id: 'crimson', name: 'Crimson', dark: true, colors: ['#f7374f', '#88304e', '#522546', '#2c2c2c'] },
   { id: 'oxblood', name: 'Oxblood', dark: true, colors: ['#6d0808', '#2d0000', '#757d6f', '#eeead7'] },
