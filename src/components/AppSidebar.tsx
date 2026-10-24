@@ -81,7 +81,7 @@ export function AppSidebar({ route }: { route: Route }) {
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
-        <a href="#/" className="flex items-center gap-2 px-2 py-1 font-semibold"><LogoIcon />Lab dashboard</a>
+        <a href="/" className="flex items-center gap-2 px-2 py-1 font-semibold"><LogoIcon />Lab dashboard</a>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -116,7 +116,7 @@ export function AppSidebar({ route }: { route: Route }) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton render={<a href="#/present" />}><MonitorPlayIcon /><span>Present</span></SidebarMenuButton>
+            <SidebarMenuButton render={<a href="/present" />}><MonitorPlayIcon /><span>Present</span></SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem className="px-2 pt-1"><PalettePicker /></SidebarMenuItem>
         </SidebarMenu>

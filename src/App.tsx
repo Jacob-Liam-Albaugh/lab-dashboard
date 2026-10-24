@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { useJson, useWatch } from '@/lib/api'
-import { href, useRoute } from '@/lib/route'
+import { href, navigate, useRoute } from '@/lib/route'
 import { AppSidebar } from './components/AppSidebar'
 import { FileView } from './components/FileView'
 import { FolderView } from './components/FolderView'
@@ -29,7 +29,7 @@ function usePresentKey() {
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
       if (e.key !== 'p' || e.metaKey || e.ctrlKey || e.altKey || t.isContentEditable || t.closest('input, textarea, select')) return
-      location.hash = '#/present'
+      navigate('/present')
     }
     addEventListener('keydown', key)
     return () => removeEventListener('keydown', key)

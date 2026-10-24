@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Skeleton } from '@/components/ui/skeleton'
 import { apiUrl, fileUrl, send, useText, useVersion, type Pin } from '@/lib/api'
 import { markdownSection } from '@/lib/parse'
+import { navigate } from '@/lib/route'
 import { cn } from '@/lib/utils'
 import { FileView } from './FileView'
 import { dirname, Markdown } from './Markdown'
@@ -18,9 +19,7 @@ const loaded = fetch('/api/pins').then((r) => r.json()).then((p: Pin[]) => { pin
 const same = (a: Pin, b: Pin) => a.project === b.project && a.path === b.path && a.run === b.run && a.section === b.section
 const pinKey = (p: Pin) => `${p.project}:${p.run}:${p.path}:${p.section}`
 
-let enteredFromApp = false
-addEventListener('hashchange', (e) => { enteredFromApp = new URL(e.newURL).hash === '#/present' })
-const exit = () => (enteredFromApp ? history.back() : (location.hash = '#/'))
+const exit = () => (history.state?.inApp ? history.back() : navigate('/'))
 
 async function save(next: Pin[]) {
   await loaded

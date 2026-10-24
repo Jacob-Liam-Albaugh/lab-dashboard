@@ -7,10 +7,10 @@ export type Route =
   | { view: 'runs'; project: string }
   | { view: 'file' | 'dir'; project: string; path: string }
 
-export function parseHash(hash: string): Route {
-  const [, kind, project, sub, ...rest] = hash.replace(/^#/, '').split('/').map(decodeURIComponent)
-  if (kind === 'present') return { view: 'present' }
-  if (kind !== 'p' || !project) return { view: 'home' }
+export function parsePath(pathname: string): Route {
+  const [, project, sub, ...rest] = pathname.split('/').map(decodeURIComponent)
+  if (!project) return { view: 'home' }
+  if (project === 'present') return { view: 'present' }
   if (sub === 'run') return { view: 'runs', project }
   if (sub === 'f' || sub === 'd') return { view: sub === 'f' ? 'file' : 'dir', project, path: rest.join('/') }
   return { view: 'project', project }
@@ -19,13 +19,31 @@ export function parseHash(hash: string): Route {
 export function href(r: Route): string {
   const e = encodeURIComponent
   switch (r.view) {
-    case 'home': return '#/'
-    case 'present': return '#/present'
-    case 'project': return `#/p/${e(r.project)}`
-    case 'runs': return `#/p/${e(r.project)}/run`
-    default: return `#/p/${e(r.project)}/${r.view === 'file' ? 'f' : 'd'}/${r.path.split('/').map(e).join('/')}`
+    case 'home': return '/'
+    case 'present': return '/present'
+    case 'project': return `/${e(r.project)}`
+    case 'runs': return `/${e(r.project)}/run`
+    default: return `/${e(r.project)}/${r.view === 'file' ? 'f' : 'd'}/${r.path.split('/').map(e).join('/')}`
   }
 }
 
-const subscribe = (l: () => void) => (addEventListener('hashchange', l), () => removeEventListener('hashchange', l))
-export const useRoute = () => parseHash(useSyncExternalStore(subscribe, () => location.hash))
+// marks entries pushed in-app, so leaving Present knows whether history.back() stays in the dashboard
+export function navigate(to: string) {
+  history.pushState({ inApp: true }, '', to)
+  dispatchEvent(new PopStateEvent('popstate'))
+}
+
+// keeps old #/p/... bookmarks working
+if (location.hash.startsWith('#/')) history.replaceState(null, '', location.hash.slice(1).replace(/^\/p\//, '/'))
+
+addEventListener('click', (e) => {
+  const a = e.target instanceof Element ? e.target.closest('a') : null
+  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+  if (a.target || a.hasAttribute('download') || a.origin !== location.origin || a.pathname.startsWith('/api/')) return
+  if (a.pathname === location.pathname && a.hash) return
+  e.preventDefault()
+  navigate(a.pathname + a.search + a.hash)
+})
+
+const subscribe = (l: () => void) => (addEventListener('popstate', l), () => removeEventListener('popstate', l))
+export const useRoute = () => parsePath(useSyncExternalStore(subscribe, () => location.pathname))
