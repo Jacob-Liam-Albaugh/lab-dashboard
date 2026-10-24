@@ -58,7 +58,7 @@ export function ProjectView({ project }: { project: string }) {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{info.harnesses.map((d) => <HarnessCard key={d} project={project} dir={d} />)}</div>
         </section>
       )}
-      {readme && <section><Markdown text={readme} project={project} dir={dirname(info.readme!)} /></section>}
+      {readme && <section><Markdown text={readme} project={project} dir={dirname(info.readme!)} path={info.readme!} /></section>}
       {!current && !info.harnesses.length && !readme && (
         <p className="text-sm text-muted-foreground">No ledger, harness or README found. Browse the files in the sidebar.</p>
       )}

@@ -172,7 +172,8 @@ export function ReplicationView({ project, dir }: { project: string; dir: string
 
 export function FolderView({ project, dir }: { project: string; dir: string }) {
   const { data: entries, error } = useJson<Entry[]>(apiUrl('tree', { p: project, dir }))
-  const { data: readme } = useText(entries?.some((e) => /^readme\.md$/i.test(e.name)) ? fileUrl(project, join(dir, entries.find((e) => /^readme\.md$/i.test(e.name))!.name)) : null)
+  const readmeName = entries?.find((e) => /^readme\.md$/i.test(e.name))?.name
+  const { data: readme } = useText(readmeName ? fileUrl(project, join(dir, readmeName)) : null)
   if (error) return <pre className="text-sm text-critical">{error}</pre>
   if (!entries) return null
   const files = entries.filter((e) => !e.dir)
@@ -194,7 +195,7 @@ export function FolderView({ project, dir }: { project: string; dir: string }) {
       {npz.length >= 2 && <Sweep project={project} dir={dir} files={npz} />}
       {hasJson && <Matrix project={project} dir={dir} />}
       {images.length > 0 && <ImageGrid project={project} paths={images} />}
-      {readme && <Markdown text={readme} project={project} dir={dir} />}
+      {readme && <Markdown text={readme} project={project} dir={dir} path={join(dir, readmeName!)} />}
     </div>
   )
 }

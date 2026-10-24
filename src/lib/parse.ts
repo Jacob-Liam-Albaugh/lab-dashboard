@@ -66,6 +66,22 @@ export function ledgerPoints(rows: Row[], column: string, goal: Goal): LedgerPoi
   })
 }
 
+/** Returns the body under a heading line, up to the next heading of the same or higher level. */
+export function markdownSection(text: string, heading: string): string | null {
+  const lines = text.split('\n')
+  let fenced = false
+  let start = -1
+  let level = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(```|~~~)/.test(lines[i])) fenced = !fenced
+    const m = fenced ? null : /^(#{1,6})\s/.exec(lines[i])
+    if (!m) continue
+    if (start >= 0 && m[1].length <= level) return lines.slice(start, i).join('\n')
+    if (start < 0 && lines[i].trim() === heading) { start = i + 1; level = m[1].length }
+  }
+  return start >= 0 ? lines.slice(start).join('\n') : null
+}
+
 export function flattenNumbers(value: unknown, prefix = ''): [string, number][] {
   if (typeof value === 'number' && Number.isFinite(value)) return [[prefix, value]]
   if (value && typeof value === 'object') {

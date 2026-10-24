@@ -66,7 +66,7 @@ export function FileBody({ project, path }: { project: string; path: string }) {
   if (e === 'html') return <iframe src={url} title={path} sandbox="allow-scripts" className="h-[85vh] w-full rounded-md border bg-white" />
   if (e === 'npz' || e === 'npy') return <NpzView project={project} path={path} />
   if (e === 'ipynb') return <Notebook project={project} path={path} />
-  if (e === 'md') return <TextFile project={project} path={path} render={(t) => <Markdown text={t} project={project} dir={dirname(path)} />} />
+  if (e === 'md' || e === 'mdx') return <TextFile project={project} path={path} render={(t) => <Markdown text={t} project={project} dir={dirname(path)} path={path} />} />
   if (/^(csv|tsv|jsonl)$/.test(e)) return <TextFile project={project} path={path} render={(t) => <DataTable rows={parseRows(t, path)} project={project} base={dirname(path)} />} />
   if (/^(pt|pth|ckpt|h5|hdf5|pkl|pickle|nc|zip|gz|tar|bin|so|o|mat|parquet|feather|eqx)$/.test(e)) {
     return <p className="text-sm text-muted-foreground">Binary file. <a className="underline" href={url} download>Download</a></p>

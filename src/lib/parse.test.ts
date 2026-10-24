@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { guessScore, ledgerPoints, metricNames, parseDelimited, reduceMetric } from './parse'
+import { guessScore, ledgerPoints, markdownSection, metricNames, parseDelimited, reduceMetric } from './parse'
 import { resolveIn } from '../../server/plugin'
 
 test('parses quoted csv and tsv', () => {
@@ -32,4 +32,11 @@ test('rejects paths outside the project', () => {
   expect(() => resolveIn('/a/b', '../c')).toThrow()
   expect(() => resolveIn('/a/b', '/a/bc')).toThrow()
   expect(resolveIn('/a/b', 'c/d')).toBe('/a/b/c/d')
+})
+
+test('markdown section stops at the next heading of equal or higher level', () => {
+  const md = '# A\nintro\n## B\nb text\n```\n# not a heading\n```\n### B1\nnested\n## C\nc text'
+  expect(markdownSection(md, '## B')).toBe('b text\n```\n# not a heading\n```\n### B1\nnested')
+  expect(markdownSection(md, '## C')).toBe('c text')
+  expect(markdownSection(md, '## gone')).toBeNull()
 })

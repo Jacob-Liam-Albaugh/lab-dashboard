@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import type { Element, ElementContent } from 'hast'
 import ReactMarkdown from 'react-markdown'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import { fileUrl, useVersion } from '@/lib/api'
 import { href } from '@/lib/route'
+import { PinButton } from './Present'
 
 export function joinPath(dir: string, rel: string) {
   const out: string[] = []
@@ -16,9 +18,24 @@ export function joinPath(dir: string, rel: string) {
 }
 export const dirname = (p: string) => p.split('/').slice(0, -1).join('/')
 const external = (u: string) => /^([a-z]+:|#|\/)/i.test(u)
+const textOf = (n: ElementContent): string => (n.type === 'text' ? n.value : 'children' in n ? n.children.map(textOf).join('') : '')
 
-export function Markdown({ text, project, dir = '' }: { text: string; project?: string; dir?: string }) {
+function PinnableHeading({ node, children, level, text, project, path }: { node?: Element; children?: ReactNode; level: 1 | 2 | 3; text: string; project: string; path: string }) {
+  const H = `h${level}` as const
+  const line = node?.position && text.split('\n')[node.position.start.line - 1]?.trim()
+  return (
+    <H className="group flex items-center gap-1">
+      <span>{children}</span>
+      {line && <PinButton pin={{ project, path, section: line, title: `${path.split('/').pop()} · ${textOf(node)}` }} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" />}
+    </H>
+  )
+}
+
+export function Markdown({ text, project, dir = '', path }: { text: string; project?: string; dir?: string; path?: string }) {
   const v = useVersion()
+  const heading = (level: 1 | 2 | 3) => project && path
+    ? { [`h${level}`]: (p: { node?: Element; children?: ReactNode }) => <PinnableHeading {...p} level={level} text={text} project={project} path={path} /> }
+    : {}
   return (
     <div className="prose-lab">
       <ReactMarkdown
@@ -34,6 +51,7 @@ export function Markdown({ text, project, dir = '' }: { text: string; project?: 
             return <a href={href({ view: h.endsWith('/') ? 'dir' : 'file', project, path })}>{children}</a>
           },
           pre: ({ children }) => <pre className="overflow-x-auto">{children}</pre>,
+          ...heading(1), ...heading(2), ...heading(3),
         }}
       >
         {text}
