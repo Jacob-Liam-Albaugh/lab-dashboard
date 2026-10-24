@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { useJson, useWatch } from '@/lib/api'
 import { href, useRoute } from '@/lib/route'
@@ -23,8 +24,21 @@ function Home() {
   )
 }
 
+function usePresentKey() {
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      if (e.key !== 'p' || e.metaKey || e.ctrlKey || e.altKey || t.isContentEditable || t.closest('input, textarea, select')) return
+      location.hash = '#/present'
+    }
+    addEventListener('keydown', key)
+    return () => removeEventListener('keydown', key)
+  }, [])
+}
+
 export default function App() {
   const route = useRoute()
+  usePresentKey()
   useWatch('project' in route ? route.project : undefined)
   if (route.view === 'present') return <PresentView />
   return (

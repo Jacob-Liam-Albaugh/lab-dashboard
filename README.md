@@ -26,6 +26,12 @@ Needs [bun](https://bun.sh) and [uv](https://docs.astral.sh/uv/) (for `.npz` fil
 
 Views refresh live when files change.
 
+## Palettes
+
+Pick a colour palette from the sidebar footer. Palettes live in `src/lib/palette.ts`
+(name, light or dark, swatch) and `src/index.css` (one `[data-palette]` block of ten
+colours each). More palettes to borrow from: [Color Hunt](https://colorhunt.co).
+
 ## Runs
 
 The Runs page executes a command in the project folder through your login shell and
@@ -34,8 +40,8 @@ streams its output. `plt.show()` calls are captured as PNGs into the dashboard's
 
 ## Present
 
-Pin any file, chart or captured figure, then open **Present** for a full-screen slide
-deck. Arrow keys or space move between slides, `f` toggles fullscreen, and `Esc` exits.
+Pin any file, chart or captured figure, then open **Present** (or press `p`) for a
+full-screen slide deck. Arrow keys or space move between slides, `f` toggles fullscreen, and `Esc` exits.
 
 ## Notes
 
