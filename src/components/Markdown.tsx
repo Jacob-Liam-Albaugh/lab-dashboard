@@ -17,6 +17,7 @@ export function joinPath(dir: string, rel: string) {
   return out.join('/')
 }
 export const dirname = (p: string) => p.split('/').slice(0, -1).join('/')
+const filePath = /^[\w.-]+(\/[\w.-]+)+\.\w+$/
 const external = (u: string) => /^([a-z]+:|#|\/)/i.test(u)
 const textOf = (n: ElementContent): string => (n.type === 'text' ? n.value : 'children' in n ? n.children.map(textOf).join('') : '')
 
@@ -50,6 +51,9 @@ export function Markdown({ text, project, dir = '', path }: { text: string; proj
             const path = joinPath(dir, h.split('#')[0])
             return <a href={href({ view: h.endsWith('/') ? 'dir' : 'file', project, path })}>{children}</a>
           },
+          code: ({ children, className }) => typeof children === 'string' && project && filePath.test(children)
+            ? <a href={href({ view: 'file', project, path: joinPath(dir, children) })}><code>{children}</code></a>
+            : <code className={className}>{children}</code>,
           pre: ({ children }) => <pre className="overflow-x-auto">{children}</pre>,
           ...heading(1), ...heading(2), ...heading(3),
         }}

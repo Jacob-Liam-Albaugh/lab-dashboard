@@ -24,6 +24,14 @@ function TextFile({ project, path, render }: { project: string; path: string; re
   return <>{render(data)}{data.length >= TEXT_HEAD && <p className="mt-2 text-xs text-muted-foreground">Showing the first 512 KB.</p>}</>
 }
 
+// passes the page inline because some browsers and blockers refuse to load /api/ URLs in frames
+function HtmlFile({ url, title }: { url: string; title: string }) {
+  const { data, error } = useText(url)
+  if (error) return <pre className="text-sm text-critical">{error}</pre>
+  if (data === undefined) return <Skeleton className="h-64" />
+  return <iframe srcDoc={data} title={title} sandbox="allow-scripts" className="h-[85vh] w-full rounded-md border bg-white" />
+}
+
 type Output = { output_type: string; text?: string | string[]; data?: Record<string, string | string[]>; traceback?: string[] }
 type Cell = { cell_type: string; source: string | string[]; outputs?: Output[] }
 const joined = (s: string | string[] | undefined) => (Array.isArray(s) ? s.join('') : (s ?? ''))
@@ -63,7 +71,7 @@ export function FileBody({ project, path }: { project: string; path: string }) {
   if (/^(png|jpe?g|gif|svg|webp)$/.test(e)) return <img src={url} alt={path} className="mx-auto max-h-[80vh] max-w-full rounded-md bg-white" />
   if (e === 'pdf') return <iframe src={url} title={path} className="h-[85vh] w-full rounded-md border" />
   if (/^(mp4|webm|mov)$/.test(e)) return <video src={url} controls loop className="mx-auto max-h-[80vh] max-w-full" />
-  if (e === 'html') return <iframe src={url} title={path} sandbox="allow-scripts" className="h-[85vh] w-full rounded-md border bg-white" />
+  if (e === 'html') return <HtmlFile url={url} title={path} />
   if (e === 'npz' || e === 'npy') return <NpzView project={project} path={path} />
   if (e === 'ipynb') return <Notebook project={project} path={path} />
   if (e === 'md' || e === 'mdx') return <TextFile project={project} path={path} render={(t) => <Markdown text={t} project={project} dir={dirname(path)} path={path} />} />
