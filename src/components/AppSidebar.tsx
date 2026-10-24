@@ -23,7 +23,7 @@ function LogoIcon() {
 }
 
 function Swatch({ colors }: { colors: string[] }) {
-  return <span className="flex overflow-hidden rounded-sm ring-1 ring-border">{colors.map((c) => <span key={c} className="size-3" style={{ background: c }} />)}</span>
+  return <span className="flex self-center overflow-hidden rounded-sm ring-1 ring-border">{colors.map((c) => <span key={c} className="size-3" style={{ background: c }} />)}</span>
 }
 
 function PalettePicker() {
