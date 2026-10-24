@@ -30,7 +30,7 @@ export default function App() {
   return (
     <SidebarProvider>
       <AppSidebar route={route} />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <header className="flex h-10 items-center border-b px-2"><SidebarTrigger /></header>
         <main className="mx-auto w-full max-w-7xl p-4 md:p-6">
           {route.view === 'home' && <Home />}

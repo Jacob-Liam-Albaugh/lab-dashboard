@@ -12,8 +12,8 @@ const IDLE = /^(skipped|discard(ed)?|unset)$/i
 const PATHLIKE = /^[\w.-]+(\/[\w.-]+)+\.\w{1,6}$/
 
 export function StatusBadge({ value }: { value: string }) {
-  if (GOOD.test(value)) return <Badge variant="outline" className="gap-1 border-good/40 text-good"><CheckIcon />{value}</Badge>
-  if (BAD.test(value)) return <Badge variant="outline" className="gap-1 border-critical/40 text-critical"><XIcon />{value}</Badge>
+  if (GOOD.test(value)) return <Badge variant="outline" className="gap-1 border-good/30 bg-good/10 text-good"><CheckIcon />{value}</Badge>
+  if (BAD.test(value)) return <Badge variant="outline" className="gap-1 border-critical/30 bg-critical/10 text-critical"><XIcon />{value}</Badge>
   if (IDLE.test(value)) return <Badge variant="outline" className="gap-1 text-muted-foreground"><MinusIcon />{value}</Badge>
   if (/^(active|running)$/i.test(value)) return <Badge variant="secondary" className="gap-1"><CircleIcon />{value}</Badge>
   return <Badge variant="outline" className="gap-1"><CircleDashedIcon />{value}</Badge>

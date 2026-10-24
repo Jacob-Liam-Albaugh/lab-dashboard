@@ -47,7 +47,7 @@ export function AppSidebar({ route }: { route: Route }) {
   const active = 'project' in route ? route.project : undefined
   const current = 'path' in route ? route.path : undefined
   return (
-    <Sidebar>
+    <Sidebar variant="inset">
       <SidebarHeader>
         <a href="#/" className="flex items-center gap-2 px-2 py-1 font-semibold"><FlaskConicalIcon className="size-4" />Lab dashboard</a>
       </SidebarHeader>
