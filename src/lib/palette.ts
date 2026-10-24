@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react'
+
 export const PALETTES = [
   { id: 'light', name: 'Light', dark: false, colors: ['#f5f4f2', '#ffffff', '#4263eb', '#2a2724'] },
   { id: 'sand', name: 'Sand', dark: false, colors: ['#ebe2cc', '#ded6c1', '#cfc6b1', '#b7b09e'] },
@@ -13,6 +15,13 @@ export const PALETTES = [
   { id: 'dusk', name: 'Dusk', dark: true, colors: ['#37353e', '#44444e', '#715a5a', '#d3dad9'] },
   { id: 'navy', name: 'Navy sand', dark: true, colors: ['#202940', '#4b4038', '#9a8678', '#caaa98'] },
 ]
+
+const watch = (on: () => void) => {
+  const o = new MutationObserver(on)
+  o.observe(document.documentElement, { attributeFilter: ['class'] })
+  return () => o.disconnect()
+}
+export const useDark = () => useSyncExternalStore(watch, () => document.documentElement.classList.contains('dark'))
 
 export function applyPalette(id: string | null) {
   const palette = PALETTES.find((p) => p.id === id) ?? PALETTES.find((p) => p.id === 'wine')!

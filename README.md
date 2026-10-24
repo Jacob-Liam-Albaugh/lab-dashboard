@@ -17,6 +17,7 @@ Needs [bun](https://bun.sh) and [uv](https://docs.astral.sh/uv/) (for `.npz` fil
 
 | File | View |
 |---|---|
+| `capability-matrix.json` | Capability matrix: models × capabilities with kind, gate and required-capability filters; shown first on the project page when at the root |
 | `results.tsv`, `runs/ledger.jsonl` | Experiment ledger: kept/discarded scatter, incumbent step line, per-run detail and artifacts |
 | `*.npz`, `*.npy` | Per-array stats and series/histogram; MCMC chains get trace, R-hat and ESS |
 | folder of `*.npz` | Sweep: mean and 90% band over a numeric key |

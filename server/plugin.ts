@@ -74,6 +74,7 @@ function describe(p: Project) {
     name: p.name,
     root: p.path,
     readme: files.find((f) => /^readme\.md$/i.test(f)) ?? null,
+    matrix: files.includes('capability-matrix.json'),
     ledgers: files.filter((f) => base(f) === 'results.tsv' || f.endsWith(path.join('runs', 'ledger.jsonl'))),
     harnesses: files.filter((f) => base(f) === 'paper_manifest.json').map(dirOf),
     images: files.filter((f) => IMAGE.test(f)).slice(0, 300),

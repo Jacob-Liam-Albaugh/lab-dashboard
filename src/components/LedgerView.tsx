@@ -5,7 +5,7 @@ import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, type Cha
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toggle } from '@/components/ui/toggle'
-import { fileUrl, useText, useVersion } from '@/lib/api'
+import { fileUrl, useText, useVersion, store, stored } from '@/lib/api'
 import { guessScore, ledgerPoints, numericColumns, parseRows, type Goal, type LedgerPoint } from '@/lib/parse'
 import { href } from '@/lib/route'
 import { fmt } from './Charts'
@@ -16,13 +16,6 @@ const config: ChartConfig = {
   keep: { label: 'kept', color: 'var(--chart-1)' },
   discard: { label: 'discarded', color: 'var(--muted-foreground)' },
   incumbent: { label: 'incumbent', color: 'var(--chart-2)' },
-}
-
-function stored<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback } catch { return fallback }
-}
-function store(key: string, value: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* private mode */ }
 }
 
 function Metric({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {

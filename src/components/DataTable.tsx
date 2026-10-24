@@ -46,7 +46,7 @@ export function DataTable({ rows, project, base = '', onRow, highlight }: {
     return <span className="line-clamp-2 max-w-md" title={v}>{v}</span>
   }
   return (
-    <div className="max-h-[70vh] overflow-auto rounded-md border">
+    <div className="max-h-[70vh] overflow-auto rounded-md border [&>[data-slot=table-container]]:overflow-visible">
       <Table>
         <TableHeader className="sticky top-0 z-10 bg-background">
           <TableRow>

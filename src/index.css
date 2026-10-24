@@ -5,6 +5,8 @@
 @import "@fontsource/ibm-plex-sans/500.css";
 @import "@fontsource/ibm-plex-sans/600.css";
 @import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/spectral/500.css";
+@import "@fontsource/spectral/600.css";
 @import "katex/dist/katex.min.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -13,6 +15,8 @@
     --font-heading: var(--font-sans);
     --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --font-display: 'Spectral', Georgia, serif;
+    --color-hl: var(--hl);
     --color-good: var(--good);
     --color-critical: var(--critical);
     --color-chart-6: var(--chart-6);
@@ -96,6 +100,7 @@
     --sidebar-accent-foreground: var(--primary);
     --sidebar-border: oklch(0.3 0.02 60 / 10%);
     --sidebar-ring: var(--ring);
+    --hl: color-mix(in oklab, var(--chart-1) 14%, var(--card));
 }
 
 .dark {
@@ -290,6 +295,16 @@
   html {
     @apply font-sans;
     }
+  h1, h2 {
+    @apply font-display font-semibold text-balance;
+    }
+}
+
+@utility col {
+  @apply mx-auto w-full max-w-[52rem];
+}
+@utility eyebrow {
+  @apply font-mono text-[0.72rem] font-normal tracking-[0.08em] uppercase;
 }
 .dark .shiki,
 .dark .shiki span {
@@ -301,9 +316,9 @@
 }
 
 .prose-lab {
-  @apply max-w-3xl space-y-4 leading-relaxed;
-  & h1 { @apply text-2xl font-semibold; }
-  & h2 { @apply mt-8 text-xl font-semibold; }
+  @apply col space-y-4 leading-relaxed;
+  & h1 { @apply text-[2rem] leading-tight; }
+  & h2 { @apply mt-8 text-[1.35rem] leading-tight; }
   & h3 { @apply mt-6 text-lg font-medium; }
   & a { @apply underline underline-offset-2; }
   & ul { @apply list-disc space-y-1 pl-6; }

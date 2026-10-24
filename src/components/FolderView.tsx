@@ -164,8 +164,8 @@ export function ReplicationView({ project, dir }: { project: string; dir: string
         </CardContent>
         {!!status?.completion_errors?.length && <CardContent><ul className="list-disc pl-5 text-sm text-critical">{status.completion_errors.map((e) => <li key={e}>{e}</li>)}</ul></CardContent>}
       </Card>
-      {targets.length > 0 && <section className="space-y-2"><h3 className="font-medium">Reproduction targets</h3><DataTable rows={targets} project={project} base={dir} /></section>}
-      {runs && <section className="space-y-2"><h3 className="font-medium">Run index</h3><DataTable rows={parseRows(runs, 'x.jsonl')} project={project} base={dir} /></section>}
+      {targets.length > 0 && <section className="space-y-2"><h3 className="eyebrow text-muted-foreground">Reproduction targets</h3><DataTable rows={targets} project={project} base={dir} /></section>}
+      {runs && <section className="space-y-2"><h3 className="eyebrow text-muted-foreground">Run index</h3><DataTable rows={parseRows(runs, 'x.jsonl')} project={project} base={dir} /></section>}
     </div>
   )
 }

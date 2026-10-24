@@ -4,6 +4,7 @@ export type ProjectInfo = {
   name: string
   root: string
   readme: string | null
+  matrix: boolean
   ledgers: string[]
   harnesses: string[]
   images: string[]
@@ -60,6 +61,13 @@ export function useFetch<T>(url: string | null, as: 'json' | 'text' = 'json') {
 
 export const useJson = <T,>(url: string | null) => useFetch<T>(url, 'json')
 export const useText = (url: string | null) => useFetch<string>(url, 'text')
+
+export function stored<T>(key: string, fallback: T): T {
+  try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback } catch { return fallback }
+}
+export function store(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* private mode */ }
+}
 
 export async function send(method: 'POST' | 'PUT', url: string, body?: unknown) {
   const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) })

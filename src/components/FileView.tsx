@@ -1,10 +1,12 @@
-import { ExternalLinkIcon } from 'lucide-react'
+import { ExpandIcon, ExternalLinkIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { fileUrl, useJson, useText, useVersion } from '@/lib/api'
+import { useDark } from '@/lib/palette'
 import { parseRows } from '@/lib/parse'
 import { href } from '@/lib/route'
 import { DataTable } from './DataTable'
+import { CapabilityMatrix } from './CapabilityMatrix'
 import { LedgerView } from './LedgerView'
 import { Code, dirname, Markdown } from './Markdown'
 import { NpzView } from './NpzView'
@@ -27,9 +29,11 @@ function TextFile({ project, path, render }: { project: string; path: string; re
 // passes the page inline because some browsers and blockers refuse to load /api/ URLs in frames
 function HtmlFile({ url, title }: { url: string; title: string }) {
   const { data, error } = useText(url)
+  const theme = useDark() ? 'dark' : 'light'
   if (error) return <pre className="text-sm text-critical">{error}</pre>
   if (data === undefined) return <Skeleton className="h-64" />
-  return <iframe srcDoc={data} title={title} sandbox="allow-scripts" className="h-[85vh] w-full rounded-md border bg-white" />
+  return <iframe data-html-file srcDoc={data.replace(/<html\b/i, `<html data-theme="${theme}"`)} title={title} sandbox="allow-scripts"
+    style={{ colorScheme: theme }} className="h-[calc(100svh-8.5rem)] w-full bg-background" />
 }
 
 type Output = { output_type: string; text?: string | string[]; data?: Record<string, string | string[]>; traceback?: string[] }
@@ -68,6 +72,7 @@ export function FileBody({ project, path }: { project: string; path: string }) {
   const url = fileUrl(project, path, v)
   const e = ext(path)
   if (isLedger(path)) return <LedgerView project={project} path={path} />
+  if (path.split('/').at(-1) === 'capability-matrix.json') return <CapabilityMatrix project={project} path={path} />
   if (/^(png|jpe?g|gif|svg|webp)$/.test(e)) return <img src={url} alt={path} className="mx-auto max-h-[80vh] max-w-full rounded-md bg-white" />
   if (e === 'pdf') return <iframe src={url} title={path} className="h-[85vh] w-full rounded-md border" />
   if (/^(mp4|webm|mov)$/.test(e)) return <video src={url} controls loop className="mx-auto max-h-[80vh] max-w-full" />
@@ -97,6 +102,7 @@ export function FileView({ project, path, bare }: { project: string; path: strin
             </span>
           ))}
         </nav>
+        {ext(path) === 'html' && <Button variant="ghost" size="icon-sm" aria-label="Fullscreen" title="Fullscreen" onClick={() => document.querySelector('iframe[data-html-file]')?.requestFullscreen()}><ExpandIcon /></Button>}
         <PinButton pin={{ project, path, title: parts.at(-1)! }} />
         <Button variant="ghost" size="icon-sm" aria-label="Open raw file" nativeButton={false} render={<a href={fileUrl(project, path)} target="_blank" rel="noreferrer" />}><ExternalLinkIcon /></Button>
       </div>
