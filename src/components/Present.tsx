@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDownIcon, ArrowUpIcon, ExpandIcon, PinIcon, PinOffIcon, XIcon } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, ExpandIcon, MergeIcon, PinIcon, PinOffIcon, SplitIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { apiUrl, send, type Pin } from '@/lib/api'
 import { navigate } from '@/lib/route'
+import { removeAt, setJoin, slides, swap } from '@/lib/slides'
 import { cn } from '@/lib/utils'
 import { FileBody, FileView } from './FileView'
 import { FolderView } from './FolderView'
@@ -27,7 +28,10 @@ export async function save(next: Pin[]) {
   await send('PUT', '/api/pins', next).catch((e: Error) => toast.error(`Could not save pins: ${e.message}`))
 }
 
-export const togglePin = (pin: Pin) => save(pins.some((p) => same(p, pin)) ? pins.filter((p) => !same(p, pin)) : [...pins, pin])
+export function togglePin(pin: Pin) {
+  const i = pins.findIndex((p) => same(p, pin))
+  return save(i >= 0 ? removeAt(pins, i) : [...pins, pin])
+}
 
 export const usePins = () => useSyncExternalStore((l) => (listeners.add(l), () => listeners.delete(l)), () => pins)
 
@@ -71,18 +75,37 @@ function Focused({ pin }: { pin: Pin }) {
   )
 }
 
-function Slide({ pin }: { pin: Pin }) {
+function PinBody({ pin }: { pin: Pin }) {
   return (
+    <div className="min-h-0 flex-1 overflow-auto [&_iframe[data-html-file]]:h-full">
+      {pin.run
+        ? <img src={apiUrl('run/figure', { id: pin.run, name: pin.path })} alt={pin.title} className="mx-auto max-h-full rounded-md bg-white" />
+        : pin.section !== undefined || pin.part !== undefined ? <Focused pin={pin} />
+        : pin.dir ? <FolderView project={pin.project} dir={pin.path} />
+        : <FileView project={pin.project} path={pin.path} bare />}
+    </div>
+  )
+}
+
+const source = (pin: Pin) => <p className="truncate font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
+
+function Slide({ pins }: { pins: Pin[] }) {
+  if (pins.length === 1) return (
     <div className="flex h-full flex-col gap-3 px-10 py-6">
-      <h2 className="text-2xl font-semibold">{pin.title}</h2>
-      <div className="min-h-0 flex-1 overflow-auto [&_iframe[data-html-file]]:h-full">
-        {pin.run
-          ? <img src={apiUrl('run/figure', { id: pin.run, name: pin.path })} alt={pin.title} className="mx-auto max-h-full rounded-md bg-white" />
-          : pin.section !== undefined || pin.part !== undefined ? <Focused pin={pin} />
-          : pin.dir ? <FolderView project={pin.project} dir={pin.path} />
-          : <FileView project={pin.project} path={pin.path} bare />}
-      </div>
-      <p className="font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
+      <h2 className="text-2xl font-semibold">{pins[0].title}</h2>
+      <PinBody pin={pins[0]} />
+      {source(pins[0])}
+    </div>
+  )
+  return (
+    <div className={cn('grid h-full auto-rows-[minmax(16rem,1fr)] gap-6 overflow-auto px-10 py-6 md:grid-cols-2', (pins.length === 3 || pins.length > 4) && 'xl:grid-cols-3')}>
+      {pins.map((p) => (
+        <div key={pinKey(p)} className="flex min-h-0 flex-col gap-2">
+          <h2 className="text-lg font-semibold">{p.title}</h2>
+          <PinBody pin={p} />
+          {source(p)}
+        </div>
+      ))}
     </div>
   )
 }
@@ -94,8 +117,9 @@ export function PresentView() {
   useEffect(() => {
     if (!api) return
     const on = () => setIndex(api.selectedScrollSnap())
-    api.on('select', on)
-    return () => { api.off('select', on) }
+    // merging slides shrinks the deck, which re-inits embla without a select
+    api.on('select', on).on('reInit', on)
+    return () => { api.off('select', on).off('reInit', on) }
   }, [api])
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -110,31 +134,30 @@ export function PresentView() {
     addEventListener('keydown', key)
     return () => removeEventListener('keydown', key)
   }, [api])
-  const move = (i: number, d: number) => {
-    const next = [...all]
-    ;[next[i], next[i + d]] = [next[i + d], next[i]]
-    save(next)
-  }
+  const deck = slides(all)
   if (!all.length) return <p className="p-8 text-muted-foreground">Nothing pinned yet. Use the pin button on any file, chart or run figure.</p>
   return (
     <div className="flex h-svh flex-col">
       <div className="flex items-center gap-2 border-b px-4 py-2 text-sm">
-        <span className="font-mono tabular-nums text-muted-foreground">{index + 1} / {all.length}</span>
-        <span className="truncate">{all[index]?.title}</span>
+        <span className="font-mono tabular-nums text-muted-foreground">{index + 1} / {deck.length}</span>
+        <span className="truncate">{deck[index]?.map((x) => x.pin.title).join(' · ')}</span>
         <div className="ml-auto flex gap-1">
           <Sheet>
             <SheetTrigger render={<Button variant="outline" size="sm">Slides</Button>} />
             <SheetContent>
               <SheetHeader><SheetTitle>Slides</SheetTitle></SheetHeader>
               <ol className="space-y-1 px-4">
-                {all.map((p, i) => (
-                  <li key={pinKey(p)} className="flex items-center gap-1 text-sm">
-                    <button className="flex-1 truncate text-left hover:underline" onClick={() => api?.scrollTo(i)}>{i + 1}. {p.title}</button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUpIcon /></Button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Move down" disabled={i === all.length - 1} onClick={() => move(i, 1)}><ArrowDownIcon /></Button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Remove" onClick={() => save(all.filter((_, j) => j !== i))}><XIcon /></Button>
+                {deck.map((s, n) => s.map(({ pin: p, i }, k) => (
+                  <li key={pinKey(p)} className={cn('flex items-center gap-1 text-sm', k > 0 && 'ml-4 border-l pl-2')}>
+                    <button className="flex-1 truncate text-left hover:underline" onClick={() => api?.scrollTo(n)}>{k === 0 && `${n + 1}. `}{p.title}</button>
+                    {k > 0
+                      ? <Button variant="ghost" size="icon-xs" aria-label="Split into its own slide" title="Split into its own slide" onClick={() => save(setJoin(all, i, false))}><SplitIcon /></Button>
+                      : <Button variant="ghost" size="icon-xs" aria-label="Merge into previous slide" title="Merge into previous slide" disabled={n === 0} onClick={() => save(setJoin(all, i, true))}><MergeIcon /></Button>}
+                    <Button variant="ghost" size="icon-xs" aria-label="Move up" disabled={i === 0} onClick={() => save(swap(all, i, i - 1))}><ArrowUpIcon /></Button>
+                    <Button variant="ghost" size="icon-xs" aria-label="Move down" disabled={i === all.length - 1} onClick={() => save(swap(all, i, i + 1))}><ArrowDownIcon /></Button>
+                    <Button variant="ghost" size="icon-xs" aria-label="Remove" onClick={() => save(removeAt(all, i))}><XIcon /></Button>
                   </li>
-                ))}
+                )))}
               </ol>
             </SheetContent>
           </Sheet>
@@ -144,7 +167,7 @@ export function PresentView() {
       </div>
       <Carousel setApi={setApi} className="relative min-h-0 flex-1" opts={{ watchDrag: false }}>
         <CarouselContent className="h-[calc(100svh-3rem)]">
-          {all.map((p) => <CarouselItem key={pinKey(p)} className="h-full"><Slide pin={p} /></CarouselItem>)}
+          {deck.map((s) => <CarouselItem key={pinKey(s[0].pin)} className="h-full"><Slide pins={s.map((x) => x.pin)} /></CarouselItem>)}
         </CarouselContent>
         <CarouselPrevious className="left-2" />
         <CarouselNext className="right-2" />
