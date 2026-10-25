@@ -317,13 +317,20 @@ function terminals(server: NonNullable<ViteDevServer['httpServer']>) {
     try { assertSameOrigin(req) } catch { socket.end('HTTP/1.1 403 Forbidden\r\n\r\n'); return }
     wss.handleUpgrade(req, socket, head, (ws) => {
       const cwd = projects().find((p) => p.name === url.searchParams.get('p'))?.path
-      const term = pty.spawn(process.env.SHELL || 'bash', ['-l'], {
-        name: 'xterm-256color',
-        cwd: cwd && fs.existsSync(cwd) ? cwd : os.homedir(),
-        cols: Number(url.searchParams.get('cols')) || 80,
-        rows: Number(url.searchParams.get('rows')) || 24,
-        env: { ...process.env, COLORTERM: 'truecolor' },
-      })
+      let term: pty.IPty
+      try {
+        term = pty.spawn(process.env.SHELL || 'bash', ['-l'], {
+          name: 'xterm-256color',
+          cwd: cwd && fs.existsSync(cwd) ? cwd : os.homedir(),
+          cols: Number(url.searchParams.get('cols')) || 80,
+          rows: Number(url.searchParams.get('rows')) || 24,
+          env: { ...process.env, COLORTERM: 'truecolor' },
+        })
+      } catch (e) {
+        ws.send(`\r\nCould not start a shell: ${(e as Error).message}\r\n`)
+        ws.close()
+        return
+      }
       let alive = true
       term.onData((d) => ws.send(d))
       term.onExit(() => { alive = false; ws.close() })
