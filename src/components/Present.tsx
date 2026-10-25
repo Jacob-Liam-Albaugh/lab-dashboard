@@ -1,23 +1,23 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDownIcon, ArrowUpIcon, Columns2Icon, ExpandIcon, MergeIcon, PinIcon, PinOffIcon, Rows2Icon, SplitIcon, XIcon } from 'lucide-react'
+import { ExpandIcon, PinIcon, PinOffIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { apiUrl, send, type Pin } from '@/lib/api'
 import { navigate } from '@/lib/route'
-import { columns, removeAt, setJoin, slides, splitOut, swap } from '@/lib/slides'
+import { columns, pinKey, removeAt, slides } from '@/lib/slides'
 import { cn } from '@/lib/utils'
 import { FileBody, FileView } from './FileView'
 import { FolderView } from './FolderView'
+import { SlideSorter } from './SlideSorter'
 
 let pins: Pin[] = []
 const listeners = new Set<() => void>()
 const loaded = fetch('/api/pins').then((r) => r.json()).then((p: Pin[]) => { pins = p; listeners.forEach((l) => l()) })
 
 const same = (a: Pin, b: Pin) => a.project === b.project && a.path === b.path && a.run === b.run && a.section === b.section && a.part === b.part
-const pinKey = (p: Pin) => `${p.project}:${p.run}:${p.path}:${p.section}:${p.part}`
 
 const exit = () => (history.state?.inApp ? history.back() : navigate('/'))
 
@@ -150,24 +150,9 @@ export function PresentView() {
         <div className="ml-auto flex gap-1">
           <Sheet>
             <SheetTrigger render={<Button variant="outline" size="sm">Slides</Button>} />
-            <SheetContent>
+            <SheetContent className="data-[side=right]:sm:max-w-2xl">
               <SheetHeader><SheetTitle>Slides</SheetTitle></SheetHeader>
-              <ol className="space-y-1 px-4">
-                {deck.map((s, n) => s.map(({ pin: p, i }, k) => (
-                  <li key={pinKey(p)} className={cn('flex items-center gap-1 text-sm', k > 0 && 'ml-4 border-l pl-2', p.join === 'below' && 'ml-8')}>
-                    <button className="flex-1 truncate text-left hover:underline" onClick={() => api?.scrollTo(n)}>{k === 0 && `${n + 1}. `}{p.title}</button>
-                    {k > 0 && (p.join === 'below'
-                      ? <Button variant="ghost" size="icon-xs" aria-label="Put beside the pin above" title="Put beside the pin above" onClick={() => save(setJoin(all, i, true))}><Columns2Icon /></Button>
-                      : <Button variant="ghost" size="icon-xs" aria-label="Stack under the pin above" title="Stack under the pin above" onClick={() => save(setJoin(all, i, 'below'))}><Rows2Icon /></Button>)}
-                    {k > 0
-                      ? <Button variant="ghost" size="icon-xs" aria-label="Split into its own slide" title="Split into its own slide" onClick={() => save(splitOut(all, i))}><SplitIcon /></Button>
-                      : <Button variant="ghost" size="icon-xs" aria-label="Merge with previous slide" title="Merge with previous slide" disabled={n === 0} onClick={() => save(setJoin(all, i, true))}><MergeIcon /></Button>}
-                    <Button variant="ghost" size="icon-xs" aria-label="Move up" disabled={i === 0} onClick={() => save(swap(all, i, i - 1))}><ArrowUpIcon /></Button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Move down" disabled={i === all.length - 1} onClick={() => save(swap(all, i, i + 1))}><ArrowDownIcon /></Button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Remove" onClick={() => save(removeAt(all, i))}><XIcon /></Button>
-                  </li>
-                )))}
-              </ol>
+              <SlideSorter pins={all} current={index} onPick={(n) => api?.scrollTo(n)} onChange={save} />
             </SheetContent>
           </Sheet>
           <Button variant="outline" size="sm" onClick={() => document.documentElement.requestFullscreen()}><ExpandIcon />Fullscreen</Button>
