@@ -5,8 +5,9 @@ import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import { fileUrl, useVersion } from '@/lib/api'
+import { markdownSection } from '@/lib/parse'
 import { href } from '@/lib/route'
-import { PinButton } from './Present'
+import { Part, PinButton, portal, useFocus } from './Present'
 
 export function joinPath(dir: string, rel: string) {
   const out: string[] = []
@@ -19,21 +20,27 @@ export function joinPath(dir: string, rel: string) {
 export const dirname = (p: string) => p.split('/').slice(0, -1).join('/')
 const filePath = /^[\w.-]+(\/[\w.-]+)+\.\w+$/
 const external = (u: string) => /^([a-z]+:|#|\/)/i.test(u)
+const sourceLine = (text: string, node?: Element) => node?.position && text.split('\n')[node.position.start.line - 1]?.trim()
 const textOf = (n: ElementContent): string => (n.type === 'text' ? n.value : 'children' in n ? n.children.map(textOf).join('') : '')
 
 function PinnableHeading({ node, children, level, text, project, path }: { node?: Element; children?: ReactNode; level: 1 | 2 | 3; text: string; project: string; path: string }) {
   const H = `h${level}` as const
-  const line = node?.position && text.split('\n')[node.position.start.line - 1]?.trim()
+  const line = sourceLine(text, node)
   return (
     <H className="group flex items-center gap-1">
       <span>{children}</span>
-      {line && <PinButton pin={{ project, path, section: line, title: `${path.split('/').pop()} · ${textOf(node)}` }} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" />}
+      {line && <PinButton pin={{ project, path, section: line, title: `${path.split('/').pop()} · ${textOf(node!)}` }} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" />}
     </H>
   )
 }
 
 export function Markdown({ text, project, dir = '', path }: { text: string; project?: string; dir?: string; path?: string }) {
   const v = useVersion()
+  const focus = useFocus()
+  if (focus?.section !== undefined) {
+    const section = markdownSection(text, focus.section)
+    return section === null ? null : portal(<Markdown text={section} project={project} dir={dir} />, focus.target)
+  }
   const heading = (level: 1 | 2 | 3) => project && path
     ? { [`h${level}`]: (p: { node?: Element; children?: ReactNode }) => <PinnableHeading {...p} level={level} text={text} project={project} path={path} /> }
     : {}
@@ -55,6 +62,9 @@ export function Markdown({ text, project, dir = '', path }: { text: string; proj
             ? <a href={href({ view: 'file', project, path: joinPath(dir, children) })}><code>{children}</code></a>
             : <code className={className}>{children}</code>,
           pre: ({ children }) => <pre className="overflow-x-auto">{children}</pre>,
+          table: ({ node, children }) => project && path && sourceLine(text, node)
+            ? <Part pin={{ project, path, part: `table:${sourceLine(text, node)}`, title: `${path.split('/').pop()} · table` }}><div className="prose-lab"><table>{children}</table></div></Part>
+            : <table>{children}</table>,
           ...heading(1), ...heading(2), ...heading(3),
         }}
       >

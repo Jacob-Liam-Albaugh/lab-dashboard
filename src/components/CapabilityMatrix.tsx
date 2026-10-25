@@ -7,6 +7,7 @@ import { Toggle } from '@/components/ui/toggle'
 import { fileUrl, store, stored, useJson } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { dirname, Markdown } from './Markdown'
+import { Part } from './Present'
 
 type Value = 'y' | 'p' | 'n' | 'nd' | '?' | 'na'
 type Column = { group: string; key: string; label: string; desc: string; tested: string | null }
@@ -250,20 +251,20 @@ export function CapabilityMatrix({ project, path }: { project: string; path: str
           <h2 className="text-[2rem] leading-tight">{m.title}</h2>
           {m.intro && md(m.intro)}
         </section>
-        <section className="grid gap-3.5">
+        <Part pin={{ project, path, part: 'space', title: `${m.title} · capability space` }}><section className="grid gap-3.5">
           <h2 className="text-[1.35rem] leading-tight">Capability space</h2>
           <p className="max-w-[65ch] text-muted-foreground">Bars show how many of the {m.rows.length} models claim each capability. The tag shows which benchmarks exercise it.</p>
           <Legend />
           <Space m={m} />
-        </section>
+        </section></Part>
       </div>
-      <section className="grid grid-cols-[minmax(0,1fr)] gap-3">
+      <Part pin={{ project, path, part: 'grid', title: `${m.title} · model × capability` }} className="grid grid-cols-[minmax(0,1fr)] gap-3">
         <Grid m={m} project={project} head={<>
           <h2 className="text-[1.35rem] leading-tight">Model × capability</h2>
           <p className="max-w-[65ch] text-muted-foreground">Click a column header to require that capability. Click a model name to see its notes. A small dot in a cell means there is a note.</p>
           <Legend />
         </>} />
-      </section>
+      </Part>
       {m.outro && <section className="col">{md(m.outro)}</section>}
     </div>
   )

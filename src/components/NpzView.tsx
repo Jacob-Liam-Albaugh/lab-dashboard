@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiUrl, useJson } from '@/lib/api'
 import { BandChart, fmt, HistChart, SeriesChart } from './Charts'
+import { Part } from './Present'
 
 type Stats = { mean: number; sd: number; lo: number; hi: number; min: number; max: number } | null
 type Hist = { counts: number[]; edges: number[] } | null
@@ -19,7 +20,6 @@ export type ArrayInfo = { name: string; shape: number[]; dtype: string } & (
   | { kind: 'chains'; columns: Chains[] }
   | { kind: 'band'; columns: Band[] }
 )
-
 export function StatRow({ stats, extra }: { stats: Stats; extra?: React.ReactNode }) {
   if (!stats) return <p className="text-xs text-muted-foreground">No finite values.</p>
   const items: [string, string][] = [['mean', fmt(stats.mean)], ['sd', fmt(stats.sd)], ['95%', `${fmt(stats.lo)} – ${fmt(stats.hi)}`], ['range', `${fmt(stats.min)} – ${fmt(stats.max)}`]]
@@ -101,7 +101,7 @@ export function NpzView({ project, path }: { project: string; path: string }) {
           <TabsList><TabsTrigger value="auto">Auto</TabsTrigger><TabsTrigger value="chains">Chains</TabsTrigger><TabsTrigger value="columns">Columns</TabsTrigger></TabsList>
         </Tabs>
       </div>
-      {!data ? <Skeleton className="h-64" /> : <div className="grid gap-4 xl:grid-cols-2">{data.map((a) => <ArrayCard key={a.name} a={a} />)}</div>}
+      {!data ? <Skeleton className="h-64" /> : <div className="grid gap-4 xl:grid-cols-2">{data.map((a) => <Part key={a.name} pin={{ project, path, part: `array:${a.name}`, title: `${path.split('/').pop()} · ${a.name}` }}><ArrayCard a={a} /></Part>)}</div>}
     </div>
   )
 }

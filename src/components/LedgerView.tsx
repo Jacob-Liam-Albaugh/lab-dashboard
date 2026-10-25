@@ -10,7 +10,7 @@ import { guessScore, ledgerPoints, numericColumns, parseRows, type Goal, type Le
 import { href } from '@/lib/route'
 import { fmt } from './Charts'
 import { DataTable, StatusBadge } from './DataTable'
-import { PinButton } from './Present'
+import { Part } from './Present'
 
 const config: ChartConfig = {
   keep: { label: 'kept', color: 'var(--chart-1)' },
@@ -64,13 +64,13 @@ export function LedgerView({ project, path, images = [] }: { project: string; pa
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Part pin={{ project, path, part: 'metrics', title: `${project} · ledger summary` }} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="Experiments" value={points.length} sub={`${crashed} crashed or invalid`} />
         <Metric label="Kept" value={kept.length} sub={`${points.length ? Math.round((kept.length / points.length) * 100) : 0}% acceptance`} />
         <Metric label={`Incumbent ${metric.column}`} value={fmt(best)} sub={`${metric.goal === 'min' ? 'lower' : 'higher'} is better`} />
         <Metric label="Change vs first" value={gain === null ? '—' : `${gain > 0 ? '+' : ''}${gain.toFixed(1)}%`} sub={`from ${fmt(first)}`} />
-      </div>
-      <Card>
+      </Part>
+      <Part pin={{ project, path, part: 'chart', title: `${project} · ${metric.column}` }}><Card>
         <CardHeader>
           <CardTitle>{metric.column} by experiment</CardTitle>
           <CardDescription>{path}</CardDescription>
@@ -82,7 +82,6 @@ export function LedgerView({ project, path, images = [] }: { project: string; pa
             <Toggle size="sm" variant="outline" pressed={metric.goal === 'min'} onPressedChange={(min) => choose({ column: metric.column, goal: min ? 'min' : 'max' })}>
               {metric.goal === 'min' ? 'lower ↓' : 'higher ↑'}
             </Toggle>
-            <PinButton pin={{ project, path, title: `${project} · ${metric.column}` }} />
           </CardAction>
         </CardHeader>
         <CardContent>
@@ -99,7 +98,7 @@ export function LedgerView({ project, path, images = [] }: { project: string; pa
             </ComposedChart>
           </ChartContainer>
         </CardContent>
-      </Card>
+      </Card></Part>
       {sel && (
         <Card>
           <CardHeader>
@@ -118,7 +117,7 @@ export function LedgerView({ project, path, images = [] }: { project: string; pa
           )}
         </Card>
       )}
-      <DataTable rows={rows} project={project} onRow={setSelected} highlight={selected ?? undefined} />
+      <Part pin={{ project, path, part: 'table', title: `${project} · ledger table` }}><DataTable rows={rows} project={project} onRow={setSelected} highlight={selected ?? undefined} /></Part>
     </div>
   )
 }

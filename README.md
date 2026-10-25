@@ -52,7 +52,7 @@ full-screen slide deck. Arrow keys or space move between slides, `f` toggles ful
 
 ## Notes
 
-- The dashboard only reads project folders; its state (pins, run logs) lives in `data/`.
+- The dashboard writes to project folders only when you save an edited file; its own state (pins, run logs) lives in `data/`.
 - It binds to `127.0.0.1` and rejects cross-origin writes. Don't expose it on a network:
   the Runs page executes arbitrary commands.
 - The terminal gives full shell access as your user, so the dashboard must stay bound to `127.0.0.1`.

@@ -12,7 +12,7 @@ import { href } from '@/lib/route'
 import { fmt, tooltipValue } from './Charts'
 import { DataTable, StatusBadge } from './DataTable'
 import { Markdown } from './Markdown'
-import { PinButton } from './Present'
+import { Part, PinButton } from './Present'
 
 const join = (dir: string, name: string) => (dir ? `${dir}/${name}` : name)
 const IMAGE = /\.(png|jpe?g|gif|svg|webp)$/i
@@ -165,7 +165,7 @@ export function ReplicationView({ project, dir }: { project: string; dir: string
         {!!status?.completion_errors?.length && <CardContent><ul className="list-disc pl-5 text-sm text-critical">{status.completion_errors.map((e) => <li key={e}>{e}</li>)}</ul></CardContent>}
       </Card>
       {targets.length > 0 && <section className="space-y-2"><h3 className="eyebrow text-muted-foreground">Reproduction targets</h3><DataTable rows={targets} project={project} base={dir} /></section>}
-      {runs && <section className="space-y-2"><h3 className="eyebrow text-muted-foreground">Run index</h3><DataTable rows={parseRows(runs, 'x.jsonl')} project={project} base={dir} /></section>}
+      {runs && <section className="space-y-2"><h3 className="eyebrow flex items-center text-muted-foreground">Run index<PinButton className="ml-auto" pin={{ project, path: p('artifacts/runs/run_index.jsonl'), title: `${manifest?.paper_title ?? dir} · run index` }} /></h3><DataTable rows={parseRows(runs, 'x.jsonl')} project={project} base={dir} /></section>}
     </div>
   )
 }
@@ -192,8 +192,8 @@ export function FolderView({ project, dir }: { project: string; dir: string }) {
           </a>
         ))}
       </div>
-      {npz.length >= 2 && <Sweep project={project} dir={dir} files={npz} />}
-      {hasJson && <Matrix project={project} dir={dir} />}
+      {npz.length >= 2 && <Part pin={{ project, path: dir, dir: true, part: 'sweep', title: `${dir || project} · sweep` }}><Sweep project={project} dir={dir} files={npz} /></Part>}
+      {hasJson && <Part pin={{ project, path: dir, dir: true, part: 'matrix', title: `${dir || project} · comparison` }}><Matrix project={project} dir={dir} /></Part>}
       {images.length > 0 && <ImageGrid project={project} paths={images} />}
       {readme && <Markdown text={readme} project={project} dir={dir} path={join(dir, readmeName!)} />}
     </div>
