@@ -3,7 +3,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { Plugin } from 'vite'
+import pty from 'node-pty'
+import type { Plugin, ViteDevServer } from 'vite'
+import { WebSocketServer } from 'ws'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const DATA = path.join(ROOT, 'data')
@@ -306,10 +308,40 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   throw new HttpError(404, `no route ${req.method} ${url.pathname}`)
 }
 
+// gives each socket its own login shell, so TUIs like claude get a real tty
+function terminals(server: NonNullable<ViteDevServer['httpServer']>) {
+  const wss = new WebSocketServer({ noServer: true })
+  server.on('upgrade', (req: IncomingMessage, socket, head) => {
+    const url = new URL(req.url!, 'http://local')
+    if (url.pathname !== '/api/term') return
+    try { assertSameOrigin(req) } catch { socket.end('HTTP/1.1 403 Forbidden\r\n\r\n'); return }
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      const cwd = projects().find((p) => p.name === url.searchParams.get('p'))?.path
+      const term = pty.spawn(process.env.SHELL || 'bash', ['-l'], {
+        name: 'xterm-256color',
+        cwd: cwd && fs.existsSync(cwd) ? cwd : os.homedir(),
+        cols: Number(url.searchParams.get('cols')) || 80,
+        rows: Number(url.searchParams.get('rows')) || 24,
+        env: { ...process.env, COLORTERM: 'truecolor' },
+      })
+      let alive = true
+      term.onData((d) => ws.send(d))
+      term.onExit(() => { alive = false; ws.close() })
+      ws.on('message', (m) => {
+        const msg = JSON.parse(String(m))
+        if (msg.cols) term.resize(msg.cols, msg.rows)
+        else term.write(msg.data)
+      })
+      ws.on('close', () => alive && term.kill())
+    })
+  })
+}
+
 export function labApi(): Plugin {
   return {
     name: 'lab-api',
     configureServer(server) {
+      if (server.httpServer) terminals(server.httpServer)
       server.middlewares.use((req, res, next) => {
         if (!req.url?.startsWith('/api/')) return next()
         handle(req, res).catch((e: unknown) => {
