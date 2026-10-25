@@ -42,6 +42,7 @@ function project(name: string | null): Project {
 export function resolveIn(root: string, rel = ''): string {
   const abs = path.resolve(root, rel)
   if (abs !== root && !abs.startsWith(root + path.sep)) throw new HttpError(403, 'path escapes project')
+  if (path.relative(root, abs).split(path.sep).some((s) => s.startsWith('.'))) throw new HttpError(403, 'hidden path')
   return abs
 }
 
@@ -235,6 +236,17 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     case 'GET /api/file': {
       const file = resolveIn(project(q('p')).path, q('path') ?? '')
       return sendFile(req, res, file, q('head') ? Number(q('head')) : undefined)
+    }
+    case 'PUT /api/file': {
+      const file = resolveIn(project(q('p')).path, q('path') ?? '')
+      const { text, base } = await body(req)
+      if (typeof text !== 'string' || typeof base !== 'string') throw new HttpError(400, 'expected text and base')
+      if (!fs.lstatSync(file, { throwIfNoEntry: false })?.isFile()) throw new HttpError(404, 'not a regular file')
+      const current = fs.readFileSync(file, 'utf8')
+      if (current.includes('\0')) throw new HttpError(415, 'binary file')
+      if (current !== base) throw new HttpError(409, 'the file changed on disk since you opened it; reopen to edit')
+      fs.writeFileSync(file, text)
+      return json({ ok: true })
     }
     case 'GET /api/npz':
       return json(await python(['inspect', resolveIn(project(q('p')).path, q('path') ?? ''), q('as') ?? 'auto']))

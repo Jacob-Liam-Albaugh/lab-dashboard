@@ -32,6 +32,8 @@ test('rejects paths outside the project', () => {
   expect(() => resolveIn('/a/b', '../c')).toThrow()
   expect(() => resolveIn('/a/b', '/a/bc')).toThrow()
   expect(resolveIn('/a/b', 'c/d')).toBe('/a/b/c/d')
+  expect(() => resolveIn('/a/b', '.env')).toThrow()
+  expect(() => resolveIn('/a/b', 'c/.git/config')).toThrow()
 })
 
 test('markdown section stops at the next heading of equal or higher level', () => {

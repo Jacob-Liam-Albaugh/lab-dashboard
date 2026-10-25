@@ -1,32 +1,33 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { ArrowDownIcon, ArrowUpIcon, ExpandIcon, PinIcon, PinOffIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Skeleton } from '@/components/ui/skeleton'
-import { apiUrl, fileUrl, send, useText, useVersion, type Pin } from '@/lib/api'
-import { markdownSection } from '@/lib/parse'
+import { apiUrl, send, type Pin } from '@/lib/api'
 import { navigate } from '@/lib/route'
 import { cn } from '@/lib/utils'
-import { FileView } from './FileView'
-import { dirname, Markdown } from './Markdown'
+import { FileBody, FileView } from './FileView'
+import { FolderView } from './FolderView'
 
 let pins: Pin[] = []
 const listeners = new Set<() => void>()
 const loaded = fetch('/api/pins').then((r) => r.json()).then((p: Pin[]) => { pins = p; listeners.forEach((l) => l()) })
 
-const same = (a: Pin, b: Pin) => a.project === b.project && a.path === b.path && a.run === b.run && a.section === b.section
-const pinKey = (p: Pin) => `${p.project}:${p.run}:${p.path}:${p.section}`
+const same = (a: Pin, b: Pin) => a.project === b.project && a.path === b.path && a.run === b.run && a.section === b.section && a.part === b.part
+const pinKey = (p: Pin) => `${p.project}:${p.run}:${p.path}:${p.section}:${p.part}`
 
 const exit = () => (history.state?.inApp ? history.back() : navigate('/'))
 
-async function save(next: Pin[]) {
+export async function save(next: Pin[]) {
   await loaded
   pins = next
   listeners.forEach((l) => l())
   await send('PUT', '/api/pins', next).catch((e: Error) => toast.error(`Could not save pins: ${e.message}`))
 }
+
+export const togglePin = (pin: Pin) => save(pins.some((p) => same(p, pin)) ? pins.filter((p) => !same(p, pin)) : [...pins, pin])
 
 export const usePins = () => useSyncExternalStore((l) => (listeners.add(l), () => listeners.delete(l)), () => pins)
 
@@ -36,31 +37,49 @@ export function PinButton({ pin, className }: { pin: Pin; className?: string }) 
   return (
     <Button variant="ghost" size="icon-sm" aria-label={pinned ? 'Unpin from presentation' : 'Pin to presentation'} aria-pressed={pinned} title={pinned ? 'Unpin' : 'Pin to presentation'}
       className={cn('text-muted-foreground', className, pinned && 'text-foreground opacity-100')}
-      onClick={() => save(pinned ? all.filter((p) => !same(p, pin)) : [...all, pin])}>
+      onClick={() => togglePin(pin)}>
       {pinned ? <PinOffIcon /> : <PinIcon />}
     </Button>
   )
 }
 
-function SectionSlide({ pin }: { pin: Pin & { section: string } }) {
-  const v = useVersion()
-  const { data, error } = useText(fileUrl(pin.project, pin.path, v))
-  if (error) return <pre className="text-sm text-critical">{error}</pre>
-  if (data === undefined) return <Skeleton className="h-64" />
-  const body = markdownSection(data, pin.section)
-  if (body === null) return <p className="text-muted-foreground">Section “{pin.section}” is no longer in {pin.path}.</p>
-  return <Markdown text={body} project={pin.project} dir={dirname(pin.path)} />
+type Focus = { part?: string; section?: string; target: HTMLElement }
+const FocusContext = createContext<Focus | null>(null)
+export const useFocus = () => useContext(FocusContext)
+export const portal = (children: ReactNode, target: HTMLElement) => createPortal(<FocusContext.Provider value={null}>{children}</FocusContext.Provider>, target)
+
+// marks a region pinnable on its own; on a slide focused on it, the region portals out of the hidden file view
+export function Part({ pin, children, className }: { pin: Pin; children: ReactNode; className?: string }) {
+  const focus = useFocus()
+  if (focus) return focus.part !== undefined && focus.part === pin.part ? portal(<div className={className}>{children}</div>, focus.target) : null
+  return (
+    <div className={cn('group/part relative', className)}>
+      {children}
+      <PinButton pin={pin} className="absolute -top-3 -right-3 z-10 bg-background opacity-0 shadow-sm ring-1 ring-border group-hover/part:opacity-100 focus-visible:opacity-100" />
+    </div>
+  )
+}
+
+function Focused({ pin }: { pin: Pin }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  const body = pin.dir ? <FolderView project={pin.project} dir={pin.path} /> : <FileBody project={pin.project} path={pin.path} />
+  return (
+    <>
+      <div ref={setTarget} className="h-full empty:before:text-muted-foreground empty:before:content-['Not_found_in_this_file.']" />
+      {target && <div hidden><FocusContext.Provider value={{ part: pin.part, section: pin.section, target }}>{body}</FocusContext.Provider></div>}
+    </>
+  )
 }
 
 function Slide({ pin }: { pin: Pin }) {
   return (
     <div className="flex h-full flex-col gap-3 px-10 py-6">
       <h2 className="text-2xl font-semibold">{pin.title}</h2>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {pin.section
-          ? <SectionSlide pin={{ ...pin, section: pin.section }} />
-          : pin.run
+      <div className="min-h-0 flex-1 overflow-auto [&_iframe[data-html-file]]:h-full">
+        {pin.run
           ? <img src={apiUrl('run/figure', { id: pin.run, name: pin.path })} alt={pin.title} className="mx-auto max-h-full rounded-md bg-white" />
+          : pin.section !== undefined || pin.part !== undefined ? <Focused pin={pin} />
+          : pin.dir ? <FolderView project={pin.project} dir={pin.path} />
           : <FileView project={pin.project} path={pin.path} bare />}
       </div>
       <p className="font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
