@@ -8,7 +8,7 @@ import type { Pin } from '@/lib/api'
 import { href, type Route } from '@/lib/route'
 import { PinButton, usePins } from './Present'
 
-const pinHref = (p: Pin) => href(p.run ? { view: 'runs', project: p.project } : { view: 'file', project: p.project, path: p.path })
+const pinHref = (p: Pin) => href(p.run ? { view: 'runs', project: p.project } : { view: p.dir ? 'dir' : 'file', project: p.project, path: p.path })
 
 function PinsMenu() {
   const pins = usePins()
@@ -22,7 +22,7 @@ function PinsMenu() {
         {!pins.length && <p className="text-muted-foreground">Nothing pinned yet.</p>}
         <ul className="max-h-[60vh] space-y-0.5 overflow-auto">
           {pins.map((p) => (
-            <li key={`${p.project}:${p.run}:${p.path}:${p.section}`} className="flex items-center gap-1">
+            <li key={`${p.project}:${p.run}:${p.path}:${p.section}:${p.part}`} className="flex items-center gap-1">
               <a href={pinHref(p)} className="min-w-0 flex-1 truncate rounded-sm px-1 py-0.5 hover:bg-muted" title={`${p.project} · ${p.path}`}>{p.title}</a>
               <PinButton pin={p} />
             </li>
