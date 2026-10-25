@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDownIcon, ArrowUpIcon, ExpandIcon, PinIcon, PinOffIcon, XIcon } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, ExpandIcon, Link2Icon, Link2OffIcon, PinIcon, PinOffIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { apiUrl, send, type Pin } from '@/lib/api'
+import { dropPin, slidesOf } from '@/lib/pins'
 import { navigate } from '@/lib/route'
 import { cn } from '@/lib/utils'
 import { FileBody, FileView } from './FileView'
@@ -27,7 +28,10 @@ export async function save(next: Pin[]) {
   await send('PUT', '/api/pins', next).catch((e: Error) => toast.error(`Could not save pins: ${e.message}`))
 }
 
-export const togglePin = (pin: Pin) => save(pins.some((p) => same(p, pin)) ? pins.filter((p) => !same(p, pin)) : [...pins, pin])
+export const togglePin = (pin: Pin) => {
+  const i = pins.findIndex((p) => same(p, pin))
+  return save(i < 0 ? [...pins, pin] : dropPin(pins, i))
+}
 
 export const usePins = () => useSyncExternalStore((l) => (listeners.add(l), () => listeners.delete(l)), () => pins)
 
@@ -71,18 +75,39 @@ function Focused({ pin }: { pin: Pin }) {
   )
 }
 
-function Slide({ pin }: { pin: Pin }) {
+function PinBody({ pin }: { pin: Pin }) {
   return (
-    <div className="flex h-full flex-col gap-3 px-10 py-6">
-      <h2 className="text-2xl font-semibold">{pin.title}</h2>
-      <div className="min-h-0 flex-1 overflow-auto [&_iframe[data-html-file]]:h-full">
-        {pin.run
-          ? <img src={apiUrl('run/figure', { id: pin.run, name: pin.path })} alt={pin.title} className="mx-auto max-h-full rounded-md bg-white" />
-          : pin.section !== undefined || pin.part !== undefined ? <Focused pin={pin} />
-          : pin.dir ? <FolderView project={pin.project} dir={pin.path} />
-          : <FileView project={pin.project} path={pin.path} bare />}
+    <div className="min-h-0 flex-1 overflow-auto [&_iframe[data-html-file]]:h-full">
+      {pin.run
+        ? <img src={apiUrl('run/figure', { id: pin.run, name: pin.path })} alt={pin.title} className="mx-auto max-h-full rounded-md bg-white" />
+        : pin.section !== undefined || pin.part !== undefined ? <Focused pin={pin} />
+        : pin.dir ? <FolderView project={pin.project} dir={pin.path} />
+        : <FileView project={pin.project} path={pin.path} bare />}
+    </div>
+  )
+}
+
+function Slide({ pins }: { pins: Pin[] }) {
+  if (pins.length === 1) {
+    const [pin] = pins
+    return (
+      <div className="flex h-full flex-col gap-3 px-10 py-6">
+        <h2 className="text-2xl font-semibold">{pin.title}</h2>
+        <PinBody pin={pin} />
+        <p className="font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
       </div>
-      <p className="font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
+    )
+  }
+  const cols = pins.length === 4 ? 2 : Math.min(pins.length, 3)
+  return (
+    <div className="grid h-full auto-rows-fr gap-6 px-10 py-6" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      {pins.map((pin) => (
+        <div key={pinKey(pin)} className="flex min-h-0 flex-col gap-2">
+          <h3 className="text-lg font-semibold">{pin.title}</h3>
+          <PinBody pin={pin} />
+          <p className="truncate font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
+        </div>
+      ))}
     </div>
   )
 }
@@ -94,8 +119,8 @@ export function PresentView() {
   useEffect(() => {
     if (!api) return
     const on = () => setIndex(api.selectedScrollSnap())
-    api.on('select', on)
-    return () => { api.off('select', on) }
+    api.on('select', on).on('reInit', on)
+    return () => { api.off('select', on).off('reInit', on) }
   }, [api])
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -110,17 +135,21 @@ export function PresentView() {
     addEventListener('keydown', key)
     return () => removeEventListener('keydown', key)
   }, [api])
+  // keeps join flags in place, so moving reorders within a slide before crossing into the next one
   const move = (i: number, d: number) => {
     const next = [...all]
-    ;[next[i], next[i + d]] = [next[i + d], next[i]]
+    next[i] = { ...all[i + d], join: all[i].join }
+    next[i + d] = { ...all[i], join: all[i + d].join }
     save(next)
   }
+  const setJoin = (i: number, join: boolean) => save(all.map((p, j) => (j === i ? { ...p, join: join || undefined } : p)))
+  const { slides, slideOf } = slidesOf(all)
   if (!all.length) return <p className="p-8 text-muted-foreground">Nothing pinned yet. Use the pin button on any file, chart or run figure.</p>
   return (
     <div className="flex h-svh flex-col">
       <div className="flex items-center gap-2 border-b px-4 py-2 text-sm">
-        <span className="font-mono tabular-nums text-muted-foreground">{index + 1} / {all.length}</span>
-        <span className="truncate">{all[index]?.title}</span>
+        <span className="font-mono tabular-nums text-muted-foreground">{index + 1} / {slides.length}</span>
+        <span className="truncate">{slides[index]?.map((p) => p.title).join(' · ')}</span>
         <div className="ml-auto flex gap-1">
           <Sheet>
             <SheetTrigger render={<Button variant="outline" size="sm">Slides</Button>} />
@@ -128,11 +157,14 @@ export function PresentView() {
               <SheetHeader><SheetTitle>Slides</SheetTitle></SheetHeader>
               <ol className="space-y-1 px-4">
                 {all.map((p, i) => (
-                  <li key={pinKey(p)} className="flex items-center gap-1 text-sm">
-                    <button className="flex-1 truncate text-left hover:underline" onClick={() => api?.scrollTo(i)}>{i + 1}. {p.title}</button>
+                  <li key={pinKey(p)} className={cn('flex items-center gap-1 text-sm', i > 0 && slideOf[i] === slideOf[i - 1] && 'pl-4')}>
+                    <button className="flex-1 truncate text-left hover:underline" onClick={() => api?.scrollTo(slideOf[i])}>{(i === 0 || slideOf[i] !== slideOf[i - 1]) && `${slideOf[i] + 1}. `}{p.title}</button>
+                    {i > 0 && (slideOf[i] === slideOf[i - 1]
+                      ? <Button variant="ghost" size="icon-xs" aria-label="Move to its own slide" title="Move to its own slide" onClick={() => setJoin(i, false)}><Link2OffIcon /></Button>
+                      : <Button variant="ghost" size="icon-xs" aria-label="Share the previous slide" title="Share the previous slide" onClick={() => setJoin(i, true)}><Link2Icon /></Button>)}
                     <Button variant="ghost" size="icon-xs" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUpIcon /></Button>
                     <Button variant="ghost" size="icon-xs" aria-label="Move down" disabled={i === all.length - 1} onClick={() => move(i, 1)}><ArrowDownIcon /></Button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Remove" onClick={() => save(all.filter((_, j) => j !== i))}><XIcon /></Button>
+                    <Button variant="ghost" size="icon-xs" aria-label="Remove" onClick={() => save(dropPin(all, i))}><XIcon /></Button>
                   </li>
                 ))}
               </ol>
@@ -144,7 +176,7 @@ export function PresentView() {
       </div>
       <Carousel setApi={setApi} className="relative min-h-0 flex-1" opts={{ watchDrag: false }}>
         <CarouselContent className="h-[calc(100svh-3rem)]">
-          {all.map((p) => <CarouselItem key={pinKey(p)} className="h-full"><Slide pin={p} /></CarouselItem>)}
+          {slides.map((s) => <CarouselItem key={pinKey(s[0])} className="h-full"><Slide pins={s} /></CarouselItem>)}
         </CarouselContent>
         <CarouselPrevious className="left-2" />
         <CarouselNext className="right-2" />
