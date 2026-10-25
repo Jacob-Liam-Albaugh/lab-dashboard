@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { useJson, useWatch } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { href, navigate, useRoute } from '@/lib/route'
@@ -9,6 +9,8 @@ import { FolderView } from './components/FolderView'
 import { PresentView } from './components/Present'
 import { ProjectView } from './components/ProjectView'
 import { RunPanel } from './components/RunPanel'
+import { TerminalPanel, useTerminalOpen } from './components/Terminal'
+import { Toolbar } from './components/Toolbar'
 
 function Home() {
   const { data } = useJson<{ name: string; exists: boolean }[]>('/api/projects')
@@ -39,22 +41,28 @@ function usePresentKey() {
 
 export default function App() {
   const route = useRoute()
+  const [terminal, setTerminal] = useTerminalOpen()
+  const project = 'project' in route ? route.project : undefined
   usePresentKey()
-  useWatch('project' in route ? route.project : undefined)
-  if (route.view === 'present') return <PresentView />
+  useWatch(project)
   return (
     <SidebarProvider>
       <AppSidebar route={route} />
-      <SidebarInset className="min-w-0">
-        <header className="flex h-10 items-center border-b px-2"><SidebarTrigger /></header>
-        <main className={cn('mx-auto w-full p-4 md:p-6', !(route.view === 'file' && route.path.endsWith('.html')) && 'max-w-7xl')}>
-          {route.view === 'home' && <Home />}
-          {route.view === 'project' && <ProjectView key={route.project} project={route.project} />}
-          {route.view === 'runs' && <RunPanel key={route.project} project={route.project} />}
-          {route.view === 'file' && <FileView key={route.path} project={route.project} path={route.path} />}
-          {route.view === 'dir' && <FolderView key={route.path} project={route.project} dir={route.path} />}
-        </main>
+      <SidebarInset className="h-svh min-w-0 overflow-hidden md:peer-data-[variant=inset]:h-[calc(100svh-1rem)]">
+        <Toolbar route={route} terminal={terminal} onTerminal={() => setTerminal(!terminal)} />
+        <div className="min-h-0 flex-1 overflow-auto">
+          <main className={cn('mx-auto w-full p-4 md:p-6', !(route.view === 'file' && route.path.endsWith('.html')) && 'max-w-7xl')}>
+            {route.view === 'home' && <Home />}
+            {route.view === 'project' && <ProjectView key={route.project} project={route.project} />}
+            {route.view === 'runs' && <RunPanel key={route.project} project={route.project} />}
+            {route.view === 'file' && <FileView key={route.path} project={route.project} path={route.path} />}
+            {route.view === 'dir' && <FolderView key={route.path} project={route.project} dir={route.path} />}
+          </main>
+        </div>
+        <TerminalPanel project={project} open={terminal && route.view !== 'present'} onHide={() => setTerminal(false)} />
       </SidebarInset>
+      {/* overlays the deck instead of replacing the layout, so open terminals survive presenting */}
+      {route.view === 'present' && <div className="fixed inset-0 z-50 bg-background"><PresentView /></div>}
     </SidebarProvider>
   )
 }
