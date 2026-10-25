@@ -19,10 +19,11 @@ export const PALETTES = [
 
 const watch = (on: () => void) => {
   const o = new MutationObserver(on)
-  o.observe(document.documentElement, { attributeFilter: ['class'] })
+  o.observe(document.documentElement, { attributeFilter: ['class', 'data-palette'] })
   return () => o.disconnect()
 }
 export const useDark = () => useSyncExternalStore(watch, () => document.documentElement.classList.contains('dark'))
+export const usePalette = () => useSyncExternalStore(watch, () => document.documentElement.dataset.palette)
 
 export function applyPalette(id: string | null) {
   const palette = PALETTES.find((p) => p.id === id) ?? PALETTES.find((p) => p.id === 'wine')!

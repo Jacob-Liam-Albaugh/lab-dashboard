@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { fileUrl, send, useJson, useText, useVersion } from '@/lib/api'
-import { useDark } from '@/lib/palette'
+import { useDark, usePalette } from '@/lib/palette'
 import { parseRows } from '@/lib/parse'
 import { href } from '@/lib/route'
 import { DataTable } from './DataTable'
@@ -43,6 +43,9 @@ const sel = (e) => {
   }
   return 'body > ' + p.join(' > ')
 }
+addEventListener('message', (e) => {
+  if (e.source === parent && e.data.theme) { document.documentElement.dataset.theme = e.data.theme; document.getElementById('lab-tables').textContent = e.data.css }
+})
 if (focus) return addEventListener('load', () => {
   const el = document.querySelector(focus)
   if (!el) return void (document.body.textContent = 'Not found in this file.')
@@ -70,15 +73,28 @@ b.onclick = () => {
 addEventListener('message', (e) => { if (e.source === parent) { pinned = e.data.pinned; if (cur) show() } })
 })()</script>`
 
+// lands after the file's CSS, so it overrides its base table rules but not its targeted ones
+const tableCss = () => {
+  const s = getComputedStyle(document.documentElement)
+  const v = (name: string) => s.getPropertyValue(name)
+  return `table{font-family:${v('--font-sans')};font-size:.875rem;color:${v('--foreground')}}`
+    + `th,td{border-color:${v('--border')};background-color:${v('--background')}}th{font-weight:500;color:${v('--foreground')}}`
+    + `tbody tr:hover>*{background-color:color-mix(in oklab,${v('--muted')} 50%,${v('--background')})}`
+}
+
 // passes the page inline because some browsers and blockers refuse to load /api/ URLs in frames
 function HtmlFile({ project, path, url }: { project: string; path: string; url: string }) {
   const { data, error } = useText(url)
   const theme = useDark() ? 'dark' : 'light'
+  usePalette()
+  const css = tableCss()
+  // posts theme changes instead of rewriting srcDoc, which can hang reloading the file's web fonts
+  const [initial] = useState({ theme, css })
   const focus = useFocus()
   const frame = useRef<HTMLIFrameElement>(null)
   const pinned = JSON.stringify(usePins().flatMap((p) => (p.project === project && p.path === path && p.part ? [p.part] : [])))
-  const sync = () => frame.current?.contentWindow?.postMessage({ pinned: JSON.parse(pinned) }, '*')
-  useEffect(sync, [pinned])
+  const sync = () => frame.current?.contentWindow?.postMessage({ pinned: JSON.parse(pinned), theme, css }, '*')
+  useEffect(sync, [pinned, theme, css])
   useEffect(() => {
     const on = (e: MessageEvent) => {
       if (e.source === frame.current?.contentWindow && typeof e.data?.pin === 'string') {
@@ -91,7 +107,7 @@ function HtmlFile({ project, path, url }: { project: string; path: string; url: 
   if (focus && focus.part === undefined) return null
   if (error) return <pre className="text-sm text-critical">{error}</pre>
   if (data === undefined) return <Skeleton className="h-64" />
-  const iframe = <iframe ref={frame} onLoad={sync} data-html-file srcDoc={data.replace(/<html\b/i, `<html data-theme="${theme}"`) + pinScript(focus?.part)} title={path}
+  const iframe = <iframe ref={frame} onLoad={sync} data-html-file srcDoc={data.replace(/<html\b/i, `<html data-theme="${initial.theme}"`) + `<style id="lab-tables">${initial.css}</style>` + pinScript(focus?.part)} title={path}
     sandbox="allow-scripts" style={{ colorScheme: theme }} className="h-[calc(100svh-8.5rem)] w-full bg-background" />
   return focus ? portal(iframe, focus.target) : iframe
 }
