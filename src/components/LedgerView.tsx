@@ -50,7 +50,7 @@ export function LedgerView({ project, path, images = [] }: { project: string; pa
   const [selected, setSelected] = useState<number | null>(null)
   if (!text) return <Skeleton className="h-96" />
   const metric = choice && numericColumns(rows).includes(choice.column) ? choice : guess
-  if (!metric) return <DataTable rows={rows} project={project} />
+  if (!metric) return <DataTable rows={rows} project={project} id={path} />
   const choose = (c: { column: string; goal: Goal }) => { setChoice(c); store(key, c) }
   const points = ledgerPoints(rows, metric.column, metric.goal)
   const scored = points.filter((p) => p.score !== null)
@@ -117,7 +117,7 @@ export function LedgerView({ project, path, images = [] }: { project: string; pa
           )}
         </Card>
       )}
-      <Part pin={{ project, path, part: 'table', title: `${project} · ledger table` }}><DataTable rows={rows} project={project} onRow={setSelected} highlight={selected ?? undefined} /></Part>
+      <Part pin={{ project, path, part: 'table', title: `${project} · ledger table` }}><DataTable rows={rows} project={project} id={path} onRow={setSelected} highlight={selected ?? undefined} /></Part>
     </div>
   )
 }

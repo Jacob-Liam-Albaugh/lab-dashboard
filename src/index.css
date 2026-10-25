@@ -340,8 +340,6 @@
   & pre { @apply rounded-md border bg-muted/40 p-3 text-xs; }
   & pre code { @apply bg-transparent p-0; }
   & img { @apply max-w-full rounded-md bg-white; }
-  & table { @apply block overflow-x-auto text-sm; }
-  & th, & td { @apply border px-2 py-1 text-left; }
   & blockquote { @apply border-l-2 pl-4 text-muted-foreground; }
   & hr { @apply my-6; }
 }

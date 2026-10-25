@@ -140,7 +140,7 @@ export function FileBody({ project, path }: { project: string; path: string }) {
   if (e === 'npz' || e === 'npy') return <NpzView project={project} path={path} />
   if (e === 'ipynb') return <Notebook project={project} path={path} />
   if (e === 'md' || e === 'mdx') return <TextFile project={project} path={path} render={(t) => <Markdown text={t} project={project} dir={dirname(path)} path={path} />} />
-  if (/^(csv|tsv|jsonl)$/.test(e)) return <TextFile project={project} path={path} render={(t) => <DataTable rows={parseRows(t, path)} project={project} base={dirname(path)} />} />
+  if (/^(csv|tsv|jsonl)$/.test(e)) return <TextFile project={project} path={path} render={(t) => <DataTable rows={parseRows(t, path)} project={project} base={dirname(path)} id={path} />} />
   if (BINARY.test(e)) {
     return <p className="text-sm text-muted-foreground">Binary file. <a className="underline" href={url} download>Download</a></p>
   }

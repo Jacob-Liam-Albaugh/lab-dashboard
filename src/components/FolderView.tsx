@@ -91,6 +91,14 @@ function Matrix({ project, dir }: { project: string; dir: string }) {
   const names = metricNames(rows.flatMap((r) => Object.values(data[r])))
   const m = metric && names.includes(metric) ? metric : names[0]
   if (!m) return null
+  const cells = rows.map((r) => {
+    const vals = cols.map((c) => reduceMetric(data[r][c], m, goal))
+    const finite = vals.filter((v): v is number => v !== null)
+    const best = finite.length ? (goal === 'min' ? Math.min(...finite) : Math.max(...finite)) : null
+    const [lo, hi] = [Math.min(...finite), Math.max(...finite)]
+    return vals.map((v) => ({ v, best: v !== null && v === best, t: v === null || hi === lo ? 0.5 : (goal === 'min' ? hi - v : v - lo) / (hi - lo) }))
+  })
+  const table = rows.map((r, i) => ({ file: r, ...Object.fromEntries(cols.map((c, j) => [c, String(cells[i][j].v ?? '')])) }))
   return (
     <Card>
       <CardHeader>
@@ -104,32 +112,17 @@ function Matrix({ project, dir }: { project: string; dir: string }) {
           <Toggle size="sm" variant="outline" pressed={goal === 'min'} onPressedChange={(p) => setGoal(p ? 'min' : 'max')}>{goal === 'min' ? 'lower ↓' : 'higher ↑'}</Toggle>
         </CardAction>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-0.5 text-sm">
-          <thead><tr><th />{cols.map((c) => <th key={c} className="px-2 py-1 text-left font-medium">{c}</th>)}</tr></thead>
-          <tbody>
-            {rows.map((r) => {
-              const vals = cols.map((c) => reduceMetric(data[r][c], m, goal))
-              const finite = vals.filter((v): v is number => v !== null)
-              const best = finite.length ? (goal === 'min' ? Math.min(...finite) : Math.max(...finite)) : null
-              const [lo, hi] = [Math.min(...finite), Math.max(...finite)]
-              return (
-                <tr key={r}>
-                  <th className="px-2 py-1 text-left font-medium">{r}</th>
-                  {vals.map((v, j) => {
-                    const t = v === null || hi === lo ? 0.5 : (goal === 'min' ? hi - v : v - lo) / (hi - lo)
-                    return (
-                      <td key={j} title={`${r} · ${cols[j]}: ${v ?? 'missing'}`} className="rounded-sm px-2 py-1 font-mono tabular-nums"
-                        style={v === null ? undefined : { background: `color-mix(in oklab, var(--chart-1) ${Math.round(10 + t * 45)}%, transparent)` }}>
-                        {v === null ? <span className="text-muted-foreground">—</span> : <span className={v === best ? 'font-semibold' : ''}>{v === best && '★ '}{fmt(v)}</span>}
-                      </td>
-                    )
-                  })}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+      <CardContent>
+        <DataTable id={`${dir}:matrix`} rows={table} render={(row, k, i) => {
+          const j = cols.indexOf(k)
+          if (j < 0) return <span className="font-medium">{row[k]}</span>
+          const { v, best, t } = cells[i][j]
+          return v === null ? <span className="text-muted-foreground">—</span> : (
+            <div title={`${rows[i]} · ${k}: ${v}`} className="-mx-1 rounded-sm px-1 font-mono tabular-nums" style={{ background: `color-mix(in oklab, var(--chart-1) ${Math.round(10 + t * 45)}%, transparent)` }}>
+              <span className={best ? 'font-semibold' : ''}>{best && '★ '}{fmt(v)}</span>
+            </div>
+          )
+        }} />
       </CardContent>
     </Card>
   )
@@ -163,8 +156,8 @@ export function ReplicationView({ project, dir }: { project: string; dir: string
         </CardContent>
         {!!status?.completion_errors?.length && <CardContent><ul className="list-disc pl-5 text-sm text-critical">{status.completion_errors.map((e) => <li key={e}>{e}</li>)}</ul></CardContent>}
       </Card>
-      {targets.length > 0 && <section className="space-y-2"><h3 className="eyebrow text-muted-foreground">Reproduction targets</h3><DataTable rows={targets} project={project} base={dir} /></section>}
-      {runs && <section className="space-y-2"><h3 className="eyebrow flex items-center text-muted-foreground">Run index<PinButton className="ml-auto" pin={{ project, path: p('artifacts/runs/run_index.jsonl'), title: `${manifest?.paper_title ?? dir} · run index` }} /></h3><DataTable rows={parseRows(runs, 'x.jsonl')} project={project} base={dir} /></section>}
+      {targets.length > 0 && <section className="space-y-2"><h3 className="eyebrow text-muted-foreground">Reproduction targets</h3><DataTable rows={targets} project={project} base={dir} id={`${dir}:targets`} /></section>}
+      {runs && <section className="space-y-2"><h3 className="eyebrow flex items-center text-muted-foreground">Run index<PinButton className="ml-auto" pin={{ project, path: p('artifacts/runs/run_index.jsonl'), title: `${manifest?.paper_title ?? dir} · run index` }} /></h3><DataTable rows={parseRows(runs, 'x.jsonl')} project={project} base={dir} id={p('artifacts/runs/run_index.jsonl')} /></section>}
     </div>
   )
 }
