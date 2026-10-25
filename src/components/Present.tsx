@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ExpandIcon, PinIcon, PinOffIcon } from 'lucide-react'
+import { ExpandIcon, GripVerticalIcon, PinIcon, PinOffIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel'
@@ -11,7 +11,7 @@ import { columns, pinKey, removeAt, slides } from '@/lib/slides'
 import { cn } from '@/lib/utils'
 import { FileBody, FileView } from './FileView'
 import { FolderView } from './FolderView'
-import { SlideSorter } from './SlideSorter'
+import { SlideSorter, useArrange } from './SlideSorter'
 
 let pins: Pin[] = []
 const listeners = new Set<() => void>()
@@ -89,27 +89,34 @@ function PinBody({ pin }: { pin: Pin }) {
 
 const source = (pin: Pin) => <p className="truncate font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
 
-function Slide({ slide }: { slide: { pin: Pin; i: number }[] }) {
-  const pins = slide.map((x) => x.pin)
-  if (pins.length === 1) return (
+function Slide({ slide, n, all }: { slide: { pin: Pin; i: number }[]; n: number; all: Pin[] }) {
+  const { drag, pin: pinDrag, zone, mark, dragged } = useArrange(all, save)
+  if (slide.length === 1) return (
     <div className="flex h-full flex-col gap-3 px-10 py-6">
-      <h2 className="text-2xl font-semibold">{pins[0].title}</h2>
-      <PinBody pin={pins[0]} />
-      {source(pins[0])}
+      <h2 className="text-2xl font-semibold">{slide[0].pin.title}</h2>
+      <PinBody pin={slide[0].pin} />
+      {source(slide[0].pin)}
     </div>
   )
+  // iframes swallow dragover, so they stop taking the pointer while a pin is in flight
   return (
-    <div className="flex h-full flex-col gap-6 overflow-auto px-10 py-6 md:flex-row">
-      {columns(slide).map((col) => (
+    <div className={cn('flex h-full flex-col gap-6 overflow-auto px-10 py-6 md:flex-row', drag && '[&_iframe]:pointer-events-none')} {...zone}>
+      {columns(slide).map((col, c) => (
         // grid rows grow to their content until space runs out, so a short summary stays whole beside a tall chart
         <div key={pinKey(col[0].pin)} className={cn('grid min-h-64 min-w-0 flex-1 auto-rows-[minmax(0,auto)] gap-6 md:min-h-0', col.length > 1 && 'content-start')}>
-          {col.map(({ pin: p }) => (
-            <div key={pinKey(p)} className="flex min-h-0 flex-col gap-2">
-              <h2 className="text-lg font-semibold">{p.title}</h2>
-              <PinBody pin={p} />
-              {source(p)}
-            </div>
-          ))}
+          {col.map(({ pin: p, i }, r) => {
+            const { draggable, onDragStart, onDragEnd, onDragOver } = pinDrag(i, n, c, r)
+            return (
+              <div key={pinKey(p)} onDragOver={onDragOver} className={cn('relative flex min-h-0 flex-col gap-2', dragged({ pin: i }) && 'opacity-40')}>
+                <h2 draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd} title="Drag to rearrange" className="flex cursor-grab items-center gap-1 text-lg font-semibold active:cursor-grabbing">
+                  <GripVerticalIcon className="size-4 shrink-0 text-muted-foreground" />{p.title}
+                </h2>
+                <PinBody pin={p} />
+                {source(p)}
+                {mark(`p${i}`)}
+              </div>
+            )
+          })}
         </div>
       ))}
     </div>
@@ -161,7 +168,7 @@ export function PresentView() {
       </div>
       <Carousel setApi={setApi} className="relative min-h-0 flex-1" opts={{ watchDrag: false }}>
         <CarouselContent className="h-[calc(100svh-3rem)]">
-          {deck.map((s) => <CarouselItem key={pinKey(s[0].pin)} className="h-full"><Slide slide={s} /></CarouselItem>)}
+          {deck.map((s, n) => <CarouselItem key={pinKey(s[0].pin)} className="h-full"><Slide slide={s} n={n} all={all} /></CarouselItem>)}
         </CarouselContent>
         <CarouselPrevious className="left-2" />
         <CarouselNext className="right-2" />

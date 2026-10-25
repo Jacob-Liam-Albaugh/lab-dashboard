@@ -21,8 +21,8 @@ function nearest(e: DragEvent, edges: Edge[]): Edge {
   return edges.reduce((a, b) => (d[b] < d[a] ? b : a))
 }
 
-// every slide as a miniature of its columns; drop a pin on a tile edge to put it beside or under that tile
-export function SlideSorter({ pins, current, onPick, onChange }: { pins: Pin[]; current: number; onPick: (n: number) => void; onChange: (next: Pin[]) => void }) {
+// drag state shared by the sorter tiles and the pins on a live slide
+export function useArrange(pins: Pin[], onChange: (next: Pin[]) => void) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [aim, setAim] = useState<Aim | null>(null)
   const end = () => { setDrag(null); setAim(null) }
@@ -42,13 +42,31 @@ export function SlideSorter({ pins, current, onPick, onChange }: { pins: Pin[]; 
     e.stopPropagation()
     if (aim?.key !== key || aim.edge !== edge) setAim({ key, edge, next })
   }
+  const pin = (i: number, n: number, c: number, r: number) => ({
+    draggable: true,
+    onDragStart: (e: DragEvent) => start(e, { pin: i }),
+    onDragEnd: end,
+    onDragOver: (e: DragEvent) => over(e, `p${i}`, ['left', 'right', 'top', 'bottom'], (edge, d) => {
+      if (!('pin' in d)) return
+      if (edge === 'left' || edge === 'right') return movePin(pins, d.pin, { slide: n, column: edge === 'left' ? c : c + 1 })
+      return movePin(pins, d.pin, { slide: n, column: c, row: edge === 'top' ? r : r + 1 })
+    }),
+  })
+  const zone = {
+    onDrop: (e: DragEvent) => { e.preventDefault(); if (aim) onChange(aim.next); end() },
+    onDragLeave: (e: DragEvent) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setAim(null) },
+  }
   const mark = (key: string) => aim?.key === key && <span className={cn('pointer-events-none absolute rounded-full bg-primary', line[aim.edge])} />
   const dragged = (d: Drag) => drag && JSON.stringify(drag) === JSON.stringify(d)
+  return { drag, start, end, over, pin, zone, mark, dragged }
+}
+
+// every slide as a miniature of its columns; drop a pin on a tile edge to put it beside or under that tile
+export function SlideSorter({ pins, current, onPick, onChange }: { pins: Pin[]; current: number; onPick: (n: number) => void; onChange: (next: Pin[]) => void }) {
+  const { start, end, over, pin: pinDrag, zone, mark, dragged } = useArrange(pins, onChange)
 
   return (
-    <div className="grid grid-cols-1 gap-4 overflow-y-auto px-4 pb-4 sm:grid-cols-2"
-      onDrop={(e) => { e.preventDefault(); if (aim) onChange(aim.next); end() }}
-      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setAim(null) }}>
+    <div className="grid grid-cols-1 gap-4 overflow-y-auto px-4 pb-4 sm:grid-cols-2" {...zone}>
       {slides(pins).map((s, n) => (
         <div key={pinKey(s[0].pin)} draggable onDragStart={(e) => start(e, { slide: n })} onDragEnd={end}
           onDragOver={(e) => over(e, `s${n}`, ['left', 'right'], (edge, d) => {
@@ -61,12 +79,7 @@ export function SlideSorter({ pins, current, onPick, onChange }: { pins: Pin[]; 
             {columns(s).map((col, c) => (
               <div key={pinKey(col[0].pin)} className="flex min-w-0 flex-1 flex-col gap-1.5">
                 {col.map(({ pin, i }, r) => (
-                  <div key={pinKey(pin)} draggable onDragStart={(e) => start(e, { pin: i })} onDragEnd={end} onClick={() => onPick(n)}
-                    onDragOver={(e) => over(e, `p${i}`, ['left', 'right', 'top', 'bottom'], (edge, d) => {
-                      if (!('pin' in d)) return
-                      if (edge === 'left' || edge === 'right') return movePin(pins, d.pin, { slide: n, column: edge === 'left' ? c : c + 1 })
-                      return movePin(pins, d.pin, { slide: n, column: c, row: edge === 'top' ? r : r + 1 })
-                    })}
+                  <div key={pinKey(pin)} {...pinDrag(i, n, c, r)} onClick={() => onPick(n)}
                     className={cn('group/tile relative flex min-h-0 flex-1 items-start gap-1 rounded-md border bg-muted/50 p-1.5 text-xs', dragged({ pin: i }) && 'opacity-40')}>
                     <span className="line-clamp-3 flex-1 break-words">{pin.title}</span>
                     <Button variant="ghost" size="icon-xs" aria-label={`Remove ${pin.title}`} className="-m-1 opacity-0 group-hover/tile:opacity-100 focus-visible:opacity-100"
