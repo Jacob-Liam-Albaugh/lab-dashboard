@@ -14,7 +14,7 @@ export type ProjectInfo = {
 }
 export type Entry = { name: string; dir: boolean; size: number; mtime: number }
 export type RunMeta = { id: string; project: string; cmd: string; started: string; finished?: string; code?: number | null; figures: string[]; running: boolean }
-export type Pin = { project: string; path: string; title: string; run?: string; section?: string; part?: string; dir?: boolean; join?: boolean }
+export type Pin = { project: string; path: string; title: string; run?: string; section?: string; part?: string; dir?: boolean; join?: boolean | 'below' }
 
 const qs = (params: Record<string, string | number | undefined>) =>
   new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])).toString()
