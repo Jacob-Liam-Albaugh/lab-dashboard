@@ -1,25 +1,32 @@
 import { expect, test } from 'bun:test'
 import type { Pin } from './api'
-import { removeAt, setJoin, slides, splitOut, swap } from './slides'
+import { columns, movePin, moveSlide, removeAt, slides } from './slides'
 
-const pin = (path: string, join?: boolean): Pin => ({ project: 'p', path, title: path, ...(join ? { join } : {}) })
-const layout = (pins: Pin[]) => slides(pins).map((s) => s.map((x) => x.pin.path))
+const pin = (path: string, join?: Pin['join']): Pin => ({ project: 'p', path, title: path, ...(join ? { join } : {}) })
+const grid = (pins: Pin[]) => slides(pins).map((s) => columns(s).map((c) => c.map((x) => x.pin.path)))
 
-test('pins without join each get a slide, joined pins share one', () => {
-  expect(layout([pin('a'), pin('b')])).toEqual([['a'], ['b']])
-  expect(layout([pin('a', true), pin('b', true), pin('c')])).toEqual([['a', 'b'], ['c']])
+test('join puts pins on one slide and below stacks them into columns', () => {
+  expect(grid([pin('a'), pin('b')])).toEqual([[['a']], [['b']]])
+  expect(grid([pin('a', 'below'), pin('b', true), pin('c', 'below'), pin('d')])).toEqual([[['a'], ['b', 'c']], [['d']]])
 })
 
-test('moving keeps the slide layout and removing a head promotes the next pin', () => {
-  const pins = [pin('a'), pin('b', true), pin('c')]
-  expect(layout(swap(pins, 1, 2))).toEqual([['a', 'c'], ['b']])
-  expect(layout(removeAt(pins, 0))).toEqual([['b'], ['c']])
-  expect(layout(removeAt(pins, 1))).toEqual([['a'], ['c']])
-  expect(setJoin(setJoin(pins, 2, true), 1, false)).toEqual([pin('a'), pin('b'), pin('c', true)])
+test('removing a slide or column head promotes the pin after it', () => {
+  const pins = [pin('a'), pin('b', true), pin('c', 'below'), pin('d', true)]
+  expect(grid(removeAt(pins, 0))).toEqual([[['b', 'c'], ['d']]])
+  expect(grid(removeAt(pins, 1))).toEqual([[['a'], ['c'], ['d']]])
 })
 
-test('splitting a pin out leaves the rest of its slide together', () => {
-  const pins = [pin('a'), pin('b', true), pin('c', true), pin('d')]
-  expect(layout(splitOut(pins, 1))).toEqual([['a', 'c'], ['b'], ['d']])
-  expect(layout(splitOut(pins, 2))).toEqual([['a', 'b'], ['c'], ['d']])
+test('moving a pin drops it into a column, a new column or a new slide', () => {
+  const pins = [pin('a'), pin('b', true), pin('c', 'below'), pin('d')]
+  expect(grid(movePin(pins, 3, { slide: 0, column: 0, row: 1 }))).toEqual([[['a', 'd'], ['b', 'c']]])
+  expect(grid(movePin(pins, 2, { slide: 0, column: 1 }))).toEqual([[['a'], ['c'], ['b']], [['d']]])
+  expect(grid(movePin(pins, 0, { slide: 2 }))).toEqual([[['b', 'c']], [['d']], [['a']]])
+  expect(grid(movePin(pins, 1, { slide: 0, column: 1, row: 2 }))).toEqual([[['a'], ['c', 'b']], [['d']]])
+  expect(movePin(pins, 1, { slide: 0, column: 1, row: 0 })).toEqual(pins)
+})
+
+test('moving a slide keeps its layout', () => {
+  const pins = [pin('a'), pin('b', true), pin('c'), pin('d')]
+  expect(grid(moveSlide(pins, 0, 3))).toEqual([[['c']], [['d']], [['a'], ['b']]])
+  expect(grid(moveSlide(pins, 1, 0))).toEqual([[['c']], [['a'], ['b']], [['d']]])
 })

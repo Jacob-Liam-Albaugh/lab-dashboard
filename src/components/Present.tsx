@@ -1,23 +1,23 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDownIcon, ArrowUpIcon, ExpandIcon, MergeIcon, PinIcon, PinOffIcon, SplitIcon, XIcon } from 'lucide-react'
+import { ExpandIcon, PinIcon, PinOffIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { apiUrl, send, type Pin } from '@/lib/api'
 import { navigate } from '@/lib/route'
-import { removeAt, setJoin, slides, splitOut, swap } from '@/lib/slides'
+import { columns, pinKey, removeAt, slides } from '@/lib/slides'
 import { cn } from '@/lib/utils'
 import { FileBody, FileView } from './FileView'
 import { FolderView } from './FolderView'
+import { SlideSorter } from './SlideSorter'
 
 let pins: Pin[] = []
 const listeners = new Set<() => void>()
 const loaded = fetch('/api/pins').then((r) => r.json()).then((p: Pin[]) => { pins = p; listeners.forEach((l) => l()) })
 
 const same = (a: Pin, b: Pin) => a.project === b.project && a.path === b.path && a.run === b.run && a.section === b.section && a.part === b.part
-const pinKey = (p: Pin) => `${p.project}:${p.run}:${p.path}:${p.section}:${p.part}`
 
 const exit = () => (history.state?.inApp ? history.back() : navigate('/'))
 
@@ -89,7 +89,8 @@ function PinBody({ pin }: { pin: Pin }) {
 
 const source = (pin: Pin) => <p className="truncate font-mono text-xs text-muted-foreground">{pin.project} · {pin.path}</p>
 
-function Slide({ pins }: { pins: Pin[] }) {
+function Slide({ slide }: { slide: { pin: Pin; i: number }[] }) {
+  const pins = slide.map((x) => x.pin)
   if (pins.length === 1) return (
     <div className="flex h-full flex-col gap-3 px-10 py-6">
       <h2 className="text-2xl font-semibold">{pins[0].title}</h2>
@@ -98,12 +99,17 @@ function Slide({ pins }: { pins: Pin[] }) {
     </div>
   )
   return (
-    <div className={cn('grid h-full auto-rows-[minmax(16rem,1fr)] gap-6 overflow-auto px-10 py-6 md:grid-cols-2', (pins.length === 3 || pins.length > 4) && 'xl:grid-cols-3')}>
-      {pins.map((p) => (
-        <div key={pinKey(p)} className="flex min-h-0 flex-col gap-2">
-          <h2 className="text-lg font-semibold">{p.title}</h2>
-          <PinBody pin={p} />
-          {source(p)}
+    <div className="flex h-full flex-col gap-6 overflow-auto px-10 py-6 md:flex-row">
+      {columns(slide).map((col) => (
+        // grid rows grow to their content until space runs out, so a short summary stays whole beside a tall chart
+        <div key={pinKey(col[0].pin)} className={cn('grid min-h-64 min-w-0 flex-1 auto-rows-[minmax(0,auto)] gap-6 md:min-h-0', col.length > 1 && 'content-start')}>
+          {col.map(({ pin: p }) => (
+            <div key={pinKey(p)} className="flex min-h-0 flex-col gap-2">
+              <h2 className="text-lg font-semibold">{p.title}</h2>
+              <PinBody pin={p} />
+              {source(p)}
+            </div>
+          ))}
         </div>
       ))}
     </div>
@@ -144,21 +150,9 @@ export function PresentView() {
         <div className="ml-auto flex gap-1">
           <Sheet>
             <SheetTrigger render={<Button variant="outline" size="sm">Slides</Button>} />
-            <SheetContent>
+            <SheetContent className="data-[side=right]:sm:max-w-2xl">
               <SheetHeader><SheetTitle>Slides</SheetTitle></SheetHeader>
-              <ol className="space-y-1 px-4">
-                {deck.map((s, n) => s.map(({ pin: p, i }, k) => (
-                  <li key={pinKey(p)} className={cn('flex items-center gap-1 text-sm', k > 0 && 'ml-4 border-l pl-2')}>
-                    <button className="flex-1 truncate text-left hover:underline" onClick={() => api?.scrollTo(n)}>{k === 0 && `${n + 1}. `}{p.title}</button>
-                    {k > 0
-                      ? <Button variant="ghost" size="icon-xs" aria-label="Split into its own slide" title="Split into its own slide" onClick={() => save(splitOut(all, i))}><SplitIcon /></Button>
-                      : <Button variant="ghost" size="icon-xs" aria-label="Merge with previous slide" title="Merge with previous slide" disabled={n === 0} onClick={() => save(setJoin(all, i, true))}><MergeIcon /></Button>}
-                    <Button variant="ghost" size="icon-xs" aria-label="Move up" disabled={i === 0} onClick={() => save(swap(all, i, i - 1))}><ArrowUpIcon /></Button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Move down" disabled={i === all.length - 1} onClick={() => save(swap(all, i, i + 1))}><ArrowDownIcon /></Button>
-                    <Button variant="ghost" size="icon-xs" aria-label="Remove" onClick={() => save(removeAt(all, i))}><XIcon /></Button>
-                  </li>
-                )))}
-              </ol>
+              <SlideSorter pins={all} current={index} onPick={(n) => api?.scrollTo(n)} onChange={save} />
             </SheetContent>
           </Sheet>
           <Button variant="outline" size="sm" onClick={() => document.documentElement.requestFullscreen()}><ExpandIcon />Fullscreen</Button>
@@ -167,7 +161,7 @@ export function PresentView() {
       </div>
       <Carousel setApi={setApi} className="relative min-h-0 flex-1" opts={{ watchDrag: false }}>
         <CarouselContent className="h-[calc(100svh-3rem)]">
-          {deck.map((s) => <CarouselItem key={pinKey(s[0].pin)} className="h-full"><Slide pins={s.map((x) => x.pin)} /></CarouselItem>)}
+          {deck.map((s) => <CarouselItem key={pinKey(s[0].pin)} className="h-full"><Slide slide={s} /></CarouselItem>)}
         </CarouselContent>
         <CarouselPrevious className="left-2" />
         <CarouselNext className="right-2" />
