@@ -7,7 +7,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { apiUrl, send, type Pin } from '@/lib/api'
 import { navigate } from '@/lib/route'
-import { removeAt, setJoin, slides, swap } from '@/lib/slides'
+import { removeAt, setJoin, slides, splitOut, swap } from '@/lib/slides'
 import { cn } from '@/lib/utils'
 import { FileBody, FileView } from './FileView'
 import { FolderView } from './FolderView'
@@ -151,8 +151,8 @@ export function PresentView() {
                   <li key={pinKey(p)} className={cn('flex items-center gap-1 text-sm', k > 0 && 'ml-4 border-l pl-2')}>
                     <button className="flex-1 truncate text-left hover:underline" onClick={() => api?.scrollTo(n)}>{k === 0 && `${n + 1}. `}{p.title}</button>
                     {k > 0
-                      ? <Button variant="ghost" size="icon-xs" aria-label="Split into its own slide" title="Split into its own slide" onClick={() => save(setJoin(all, i, false))}><SplitIcon /></Button>
-                      : <Button variant="ghost" size="icon-xs" aria-label="Merge into previous slide" title="Merge into previous slide" disabled={n === 0} onClick={() => save(setJoin(all, i, true))}><MergeIcon /></Button>}
+                      ? <Button variant="ghost" size="icon-xs" aria-label="Split into its own slide" title="Split into its own slide" onClick={() => save(splitOut(all, i))}><SplitIcon /></Button>
+                      : <Button variant="ghost" size="icon-xs" aria-label="Merge with previous slide" title="Merge with previous slide" disabled={n === 0} onClick={() => save(setJoin(all, i, true))}><MergeIcon /></Button>}
                     <Button variant="ghost" size="icon-xs" aria-label="Move up" disabled={i === 0} onClick={() => save(swap(all, i, i - 1))}><ArrowUpIcon /></Button>
                     <Button variant="ghost" size="icon-xs" aria-label="Move down" disabled={i === all.length - 1} onClick={() => save(swap(all, i, i + 1))}><ArrowDownIcon /></Button>
                     <Button variant="ghost" size="icon-xs" aria-label="Remove" onClick={() => save(removeAt(all, i))}><XIcon /></Button>

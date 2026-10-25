@@ -24,4 +24,13 @@ export function removeAt(pins: Pin[], i: number): Pin[] {
 
 export const setJoin = (pins: Pin[], i: number, join: boolean): Pin[] => pins.map((p, j) => clean(j === i ? { ...p, join } : p))
 
+// moves the pin to a slide of its own right after its current one, leaving the rest of that slide together
+export function splitOut(pins: Pin[], i: number): Pin[] {
+  let end = i
+  while (pins[end + 1]?.join) end++
+  const next = pins.filter((_, j) => j !== i)
+  next.splice(end, 0, { ...pins[i], join: false })
+  return next.map(clean)
+}
+
 const clean = ({ join, ...p }: Pin): Pin => (join ? { ...p, join } : p)
