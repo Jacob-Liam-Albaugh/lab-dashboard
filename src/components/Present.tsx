@@ -104,18 +104,21 @@ function Slide({ slide, n, all }: { slide: { pin: Pin; i: number }[]; n: number;
       {columns(slide).map((col, c) => (
         // grid rows grow to their content until space runs out, so a short summary stays whole beside a tall chart
         <div key={pinKey(col[0].pin)} className={cn('grid min-h-64 min-w-0 flex-1 auto-rows-[minmax(0,auto)] gap-6 md:min-h-0', col.length > 1 && 'content-start')}>
-          {col.map(({ pin: p, i }, r) => (
-            // a lone pin hugs its content so its edges are the component's; HTML frames still fill the column
-            <div key={pinKey(p)} {...pinDrag(i, n, c, r)}
-              className={cn('relative flex max-h-full min-h-0 cursor-grab flex-col gap-2 self-start active:cursor-grabbing has-[iframe[data-html-file]]:self-stretch', dragged({ pin: i }) && 'opacity-40')}>
-              <h2 className="flex items-center gap-1 text-lg font-semibold">
-                <GripVerticalIcon className="size-4 shrink-0 text-muted-foreground" />{p.title}
-              </h2>
-              <PinBody pin={p} />
-              {source(p)}
-              {mark(`p${i}`)}
-            </div>
-          ))}
+          {col.map(({ pin: p, i }, r) => {
+            const { onDragOver, ...handle } = pinDrag(i, n, c, r)
+            return (
+              // a lone pin hugs its content so its edges are the component's; HTML frames still fill the column
+              <div key={pinKey(p)} onDragOver={onDragOver}
+                className={cn('relative flex max-h-full min-h-0 flex-col gap-2 self-start has-[iframe[data-html-file]]:self-stretch', dragged({ pin: i }) && 'opacity-40')}>
+                <h2 {...handle} title="Drag to rearrange" className="flex w-fit cursor-grab items-center gap-1 text-lg font-semibold active:cursor-grabbing">
+                  <GripVerticalIcon className="size-4 shrink-0 text-muted-foreground" />{p.title}
+                </h2>
+                <PinBody pin={p} />
+                {source(p)}
+                {mark(`p${i}`)}
+              </div>
+            )
+          })}
         </div>
       ))}
     </div>
