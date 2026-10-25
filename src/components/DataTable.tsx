@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useStored } from '@/lib/api'
 import { ArrowDownIcon, ArrowUpIcon, CheckIcon, CircleDashedIcon, CircleIcon, MinusIcon, XIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -28,9 +28,10 @@ export function DataTable({ rows, project, base = '', onRow, highlight }: {
   onRow?: (i: number) => void
   highlight?: number
 }) {
-  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null)
+  const keys = Object.keys(rows[0] ?? {})
+  // tables with the same columns share a sort, so it survives reloads without a caller-supplied id
+  const [sort, setSort] = useStored<{ key: string; dir: 1 | -1 } | null>(`table:${project}:${keys.join(',')}`, null)
   if (!rows.length) return <p className="text-sm text-muted-foreground">No rows.</p>
-  const keys = Object.keys(rows[0])
   const indexed = rows.map((r, i) => [r, i] as const)
   if (sort) {
     const num = indexed.every(([r]) => r[sort.key] === '' || isNumeric(r[sort.key]))

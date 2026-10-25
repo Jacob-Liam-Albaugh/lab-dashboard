@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { apiUrl, send, type Pin } from '@/lib/api'
+import { apiUrl, send, store, stored, type Pin } from '@/lib/api'
 import { navigate } from '@/lib/route'
 import { columns, pinKey, removeAt, slides } from '@/lib/slides'
 import { cn } from '@/lib/utils'
@@ -128,7 +128,8 @@ function Slide({ slide, n, all }: { slide: { pin: Pin; i: number }[]; n: number;
 export function PresentView() {
   const all = usePins()
   const [api, setApi] = useState<CarouselApi>()
-  const [index, setIndex] = useState(0)
+  const [index, setIndex] = useState(() => stored('present.slide', 0))
+  useEffect(() => store('present.slide', index), [index])
   useEffect(() => {
     if (!api) return
     const on = () => setIndex(api.selectedScrollSnap())
@@ -168,7 +169,7 @@ export function PresentView() {
           <Button variant="ghost" size="sm" onClick={exit}>Exit</Button>
         </div>
       </div>
-      <Carousel setApi={setApi} className="relative min-h-0 flex-1" opts={{ watchDrag: false }}>
+      <Carousel setApi={setApi} className="relative min-h-0 flex-1" opts={{ watchDrag: false, startIndex: index }}>
         <CarouselContent className="h-[calc(100svh-3rem)]">
           {deck.map((s, n) => <CarouselItem key={pinKey(s[0].pin)} className="h-full"><Slide slide={s} n={n} all={all} /></CarouselItem>)}
         </CarouselContent>

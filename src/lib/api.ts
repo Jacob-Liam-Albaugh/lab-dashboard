@@ -5,6 +5,7 @@ export type ProjectInfo = {
   root: string
   readme: string | null
   matrix: boolean
+  scores: boolean
   ledgers: string[]
   harnesses: string[]
   images: string[]
@@ -67,6 +68,11 @@ export function stored<T>(key: string, fallback: T): T {
 }
 export function store(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* private mode */ }
+}
+
+export function useStored<T>(key: string, fallback: T) {
+  const [value, setValue] = useState<T>(() => stored(key, fallback))
+  return [value, (v: T) => { setValue(v); store(key, v) }] as const
 }
 
 export async function send(method: 'POST' | 'PUT', url: string, body?: unknown) {

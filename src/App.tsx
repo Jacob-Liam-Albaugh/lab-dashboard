@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { useJson, useWatch } from '@/lib/api'
+import { useJson, useStored, useWatch } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { href, navigate, useRoute } from '@/lib/route'
 import { AppSidebar } from './components/AppSidebar'
@@ -42,11 +42,12 @@ function usePresentKey() {
 export default function App() {
   const route = useRoute()
   const [terminal, setTerminal] = useTerminalOpen()
+  const [sidebar, setSidebar] = useStored('sidebar.open', true)
   const project = 'project' in route ? route.project : undefined
   usePresentKey()
   useWatch(project)
   return (
-    <SidebarProvider>
+    <SidebarProvider open={sidebar} onOpenChange={setSidebar}>
       <AppSidebar route={route} />
       <SidebarInset className="h-svh min-w-0 overflow-hidden md:peer-data-[variant=inset]:h-[calc(100svh-1rem)]">
         <Toolbar route={route} terminal={terminal} onTerminal={() => setTerminal(!terminal)} />

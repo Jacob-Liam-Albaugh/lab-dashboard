@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Toggle } from '@/components/ui/toggle'
-import { fileUrl, store, stored, useJson } from '@/lib/api'
+import { fileUrl, store, stored, useJson, useStored } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { dirname, Markdown } from './Markdown'
 import { Part } from './Present'
@@ -143,7 +143,7 @@ function KindRow({ span, children }: { span: number; children: React.ReactNode }
 function Grid({ m, project, head }: { m: Matrix; project: string; head: React.ReactNode }) {
   const key = `matrix:${project}`
   const [prefs, setPrefs] = useState<Prefs>(() => ({ kind: 'all', gate: 'all', sort: 'group', partial: false, req: [], ...stored<Partial<Prefs>>(key, {}) }))
-  const [open, setOpen] = useState<Set<string>>(new Set())
+  const [open, setOpen] = useStored<string[]>(`${key}:open`, [])
   const table = useRef<HTMLTableElement>(null)
   useLayoutEffect(() => {
     const t = table.current!
@@ -152,7 +152,7 @@ function Grid({ m, project, head }: { m: Matrix; project: string; head: React.Re
     return () => ro.disconnect()
   }, [])
   const set = (p: Partial<Prefs>) => setPrefs((old) => { const next = { ...old, ...p }; store(key, next); return next })
-  const toggleOpen = (n: string) => setOpen((s) => { const t = new Set(s); if (!t.delete(n)) t.add(n); return t })
+  const toggleOpen = (n: string) => setOpen(open.includes(n) ? open.filter((x) => x !== n) : [...open, n])
   const toggleReq = (k: string) => set({ req: prefs.req.includes(k) ? prefs.req.filter((r) => r !== k) : [...prefs.req, k] })
 
   const passes = (r: Model) =>
@@ -168,7 +168,7 @@ function Grid({ m, project, head }: { m: Matrix; project: string; head: React.Re
   const gs = groups(m.columns)
   const starts = new Set(gs.map((g) => g.cols[0].key))
   const span = m.columns.length + 3
-  const row = (r: Model) => <ModelRow key={r.name} m={m} row={r} prefs={prefs} starts={starts} open={open.has(r.name)} onToggle={() => toggleOpen(r.name)} />
+  const row = (r: Model) => <ModelRow key={r.name} m={m} row={r} prefs={prefs} starts={starts} open={open.includes(r.name)} onToggle={() => toggleOpen(r.name)} />
   const headText = 'sticky top-0 z-[4] border-b border-l bg-card px-2.5 py-2 text-left align-bottom text-[0.8rem] font-semibold whitespace-nowrap'
 
   return (

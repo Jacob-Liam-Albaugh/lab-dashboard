@@ -1,12 +1,12 @@
-import { useState } from 'react'
 import { BookOpenIcon, PlayIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { apiUrl, fileUrl, useJson, useText, type ProjectInfo } from '@/lib/api'
+import { apiUrl, fileUrl, useJson, useStored, useText, type ProjectInfo } from '@/lib/api'
 import { href } from '@/lib/route'
 import { LedgerView } from './LedgerView'
+import { BenchmarkScores } from './BenchmarkScores'
 import { CapabilityMatrix } from './CapabilityMatrix'
 import { dirname, Markdown } from './Markdown'
 
@@ -27,7 +27,7 @@ function HarnessCard({ project, dir }: { project: string; dir: string }) {
 export function ProjectView({ project }: { project: string }) {
   const { data: info, error } = useJson<ProjectInfo>(apiUrl('project', { p: project }))
   const { data: readme } = useText(info?.readme ? fileUrl(project, info.readme) : null)
-  const [ledger, setLedger] = useState(0)
+  const [ledger, setLedger] = useStored(`ledger:${project}`, 0)
   if (error) return <pre className="text-sm text-critical">{error}</pre>
   if (!info) return <Skeleton className="h-96" />
   const current = info.ledgers[Math.min(ledger, info.ledgers.length - 1)]
@@ -40,6 +40,7 @@ export function ProjectView({ project }: { project: string }) {
         </div>
         <Button variant="outline" nativeButton={false} render={<a href={href({ view: 'runs', project })} />}><PlayIcon />Run</Button>
       </header>
+      {info.scores && <BenchmarkScores project={project} path="benchmark-scores.json" />}
       {info.matrix && <CapabilityMatrix project={project} path="capability-matrix.json" />}
       {current && (
         <section className="space-y-3">
@@ -61,7 +62,7 @@ export function ProjectView({ project }: { project: string }) {
         </section>
       )}
       {readme && <section><Markdown text={readme} project={project} dir={dirname(info.readme!)} path={info.readme!} /></section>}
-      {!info.matrix && !current && !info.harnesses.length && !readme && (
+      {!info.matrix && !info.scores && !current && !info.harnesses.length && !readme && (
         <p className="col text-sm text-muted-foreground">No ledger, harness or README found. Browse the files in the sidebar.</p>
       )}
     </div>

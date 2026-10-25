@@ -5,7 +5,7 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { apiUrl, useJson, type Entry } from '@/lib/api'
+import { apiUrl, useJson, useStored, type Entry } from '@/lib/api'
 import { applyPalette, PALETTES } from '@/lib/palette'
 import { href, type Route } from '@/lib/route'
 
@@ -53,7 +53,7 @@ function Tree({ project, dir, current }: { project: string; dir: string; current
 }
 
 function Node({ project, path, entry, current }: { project: string; path: string; entry: Entry; current?: string }) {
-  const [open, setOpen] = useState(() => !!current?.startsWith(`${path}/`))
+  const [open, setOpen] = useStored(`tree:${project}:${path}`, !!current?.startsWith(`${path}/`))
   if (!entry.dir) {
     return (
       <SidebarMenuSubItem>

@@ -1,10 +1,9 @@
-import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { apiUrl, useJson } from '@/lib/api'
+import { apiUrl, useJson, useStored } from '@/lib/api'
 import { BandChart, fmt, HistChart, SeriesChart } from './Charts'
 import { Part } from './Present'
 
@@ -39,9 +38,9 @@ function RhatBadge({ rhat }: { rhat: number | null }) {
   return <Badge variant="outline" className={ok ? 'border-good/40 text-good' : 'border-critical/40 text-critical'}>R̂ {rhat.toFixed(3)} {ok ? '✓' : '✗'}</Badge>
 }
 
-function ArrayCard({ a }: { a: ArrayInfo }) {
-  const [col, setCol] = useState(0)
-  const [view, setView] = useState<'series' | 'hist'>('series')
+function ArrayCard({ a, id }: { a: ArrayInfo; id: string }) {
+  const [col, setCol] = useStored(`${id}:col`, 0)
+  const [view, setView] = useStored<'series' | 'hist'>(`${id}:view`, 'series')
   const cols = 'columns' in a ? a.columns.length : 0
   const header = (
     <CardHeader>
@@ -90,7 +89,7 @@ function ArrayCard({ a }: { a: ArrayInfo }) {
 }
 
 export function NpzView({ project, path }: { project: string; path: string }) {
-  const [mode, setMode] = useState('auto')
+  const [mode, setMode] = useStored(`npz:${project}:${path}:mode`, 'auto')
   const { data, error } = useJson<ArrayInfo[]>(apiUrl('npz', { p: project, path, as: mode }))
   if (error) return <pre className="text-sm text-critical">{error}</pre>
   return (
@@ -101,7 +100,7 @@ export function NpzView({ project, path }: { project: string; path: string }) {
           <TabsList><TabsTrigger value="auto">Auto</TabsTrigger><TabsTrigger value="chains">Chains</TabsTrigger><TabsTrigger value="columns">Columns</TabsTrigger></TabsList>
         </Tabs>
       </div>
-      {!data ? <Skeleton className="h-64" /> : <div className="grid gap-4 xl:grid-cols-2">{data.map((a) => <Part key={a.name} pin={{ project, path, part: `array:${a.name}`, title: `${path.split('/').pop()} · ${a.name}` }}><ArrayCard a={a} /></Part>)}</div>}
+      {!data ? <Skeleton className="h-64" /> : <div className="grid gap-4 xl:grid-cols-2">{data.map((a) => <Part key={a.name} pin={{ project, path, part: `array:${a.name}`, title: `${path.split('/').pop()} · ${a.name}` }}><ArrayCard a={a} id={`npz:${project}:${path}:${a.name}`} /></Part>)}</div>}
     </div>
   )
 }

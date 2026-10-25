@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { FileIcon, FolderIcon } from 'lucide-react'
 import { CartesianGrid, ComposedChart, Area, Line, XAxis, YAxis } from 'recharts'
 import { Badge } from '@/components/ui/badge'
@@ -6,7 +5,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Toggle } from '@/components/ui/toggle'
-import { apiUrl, fileUrl, useJson, useText, useVersion, type Entry } from '@/lib/api'
+import { apiUrl, fileUrl, useJson, useStored, useText, useVersion, type Entry } from '@/lib/api'
 import { metricNames, parseRows, reduceMetric, type Goal } from '@/lib/parse'
 import { href } from '@/lib/route'
 import { fmt, tooltipValue } from './Charts'
@@ -34,11 +33,11 @@ export function ImageGrid({ project, paths }: { project: string; paths: string[]
 type SweepData = { keys: string[]; points: { file: string; x: number; columns: ({ mean: number; lo: number; hi: number } | null)[] }[] }
 
 function Sweep({ project, dir, files }: { project: string; dir: string; files: string[] }) {
-  const [key, setKey] = useState<string | null>(null)
+  const [key, setKey] = useStored<string | null>(`sweep:${project}:${dir}:key`, null)
   const { data: probe } = useJson<SweepData>(apiUrl('sweep', { p: project, dir, key: '' }))
   const chosen = key ?? probe?.keys[0] ?? null
   const { data, error } = useJson<SweepData>(chosen ? apiUrl('sweep', { p: project, dir, key: chosen }) : null)
-  const [col, setCol] = useState(0)
+  const [col, setCol] = useStored(`sweep:${project}:${dir}:col`, 0)
   const cols = Math.max(0, ...(data?.points.map((p) => p.columns.length) ?? [0]))
   const rows = data?.points.map((p) => ({ x: p.x, file: p.file, mean: p.columns[col]?.mean ?? null, band: p.columns[col] ? [p.columns[col]!.lo, p.columns[col]!.hi] : null })) ?? []
   return (
@@ -83,8 +82,8 @@ function Sweep({ project, dir, files }: { project: string; dir: string; files: s
 
 function Matrix({ project, dir }: { project: string; dir: string }) {
   const { data } = useJson<Record<string, Record<string, unknown>>>(apiUrl('jsondir', { p: project, dir }))
-  const [metric, setMetric] = useState<string | null>(null)
-  const [goal, setGoal] = useState<Goal>('min')
+  const [metric, setMetric] = useStored<string | null>(`jsondir:${project}:${dir}:metric`, null)
+  const [goal, setGoal] = useStored<Goal>(`jsondir:${project}:${dir}:goal`, 'min')
   if (!data) return null
   const rows = Object.keys(data).sort()
   const cols = [...new Set(rows.flatMap((r) => Object.keys(data[r])))].sort()
