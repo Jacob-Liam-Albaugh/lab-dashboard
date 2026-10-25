@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { fileUrl, send, useJson, useText, useVersion } from '@/lib/api'
+import { fileUrl, send, useJson, useStored, useText, useVersion } from '@/lib/api'
 import { useDark, usePalette } from '@/lib/palette'
 import { parseRows } from '@/lib/parse'
 import { href } from '@/lib/route'
@@ -73,6 +73,88 @@ b.onclick = () => {
 addEventListener('message', (e) => { if (e.source === parent) { pinned = e.data.pinned; if (cur) show() } })
 })()</script>`
 
+// gives the file's tables DataTable's header sorting; a header's own button moves to a filter icon
+const sortScript = `<script>(() => {
+let sorts = {}, passing = false
+const css = document.createElement('style')
+css.textContent = '.lab-sort{position:absolute;top:2px;right:3px;font:10px/1 system-ui;opacity:0;pointer-events:none}th:hover>.lab-sort{opacity:.5}.lab-sort[data-dir]{opacity:1}'
+  + '.lab-filter{position:absolute;bottom:2px;left:50%;translate:-50%;line-height:0;padding:1px;border-radius:3px;cursor:pointer;opacity:.6}.lab-filter:hover,.lab-filter[data-on]{opacity:1}.lab-filter[data-on]{outline:1px solid currentColor}tr[data-lab-hide]{display:none}'
+document.head.append(css)
+const heads = (t) => {
+  const taken = [], at = []
+  ;[...t.tHead.rows].forEach((r, y) => {
+    let x = 0
+    for (const c of r.cells) {
+      while (taken[y]?.[x]) x++
+      if (c.colSpan === 1) at.push([c, x])
+      for (let dy = 0; dy < c.rowSpan; dy++) for (let dx = 0; dx < c.colSpan; dx++) (taken[y + dy] ??= [])[x + dx] = 1
+      x += c.colSpan
+    }
+  })
+  return at
+}
+const key = (cell) => {
+  const s = cell?.textContent.trim() ?? ''
+  if (!s || /^[–—-]$/.test(s)) return undefined
+  const n = Number(s.replace(/[,%]/g, ''))
+  return Number.isNaN(n) ? s : n
+}
+// ranks capability glyphs worst to best, as CapabilityMatrix's RANK does
+const GLYPHS = [...'·–?○◐●']
+const compare = (a, b, dir) => a === undefined || b === undefined ? (a === undefined) - (b === undefined)
+  : dir * (typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), undefined, { numeric: true }))
+const isData = (r) => [...r.cells].every((c) => c.colSpan === 1)
+const isPinned = (r) => [...r.cells].some((c) => { const s = getComputedStyle(c); return s.position === 'sticky' && s.top !== 'auto' })
+const tables = () => [...document.querySelectorAll('table')].filter((t) => t.tHead && t.tBodies[0])
+const mo = new MutationObserver(() => apply())
+const apply = () => {
+  mo.disconnect()
+  tables().forEach((t, ti) => {
+    const [col, dir] = sorts[ti] ?? []
+    for (const [th, x] of heads(t)) {
+      if (getComputedStyle(th).position === 'static') th.style.position = 'relative'
+      th.style.cursor = 'pointer'
+      th.dataset.labCol = x
+      const a = th.querySelector(':scope > .lab-sort') ?? th.appendChild(Object.assign(document.createElement('span'), { className: 'lab-sort' }))
+      a.textContent = x === col ? (dir === 1 ? '↑' : '↓') : '↕'
+      if (x === col) a.dataset.dir = dir; else delete a.dataset.dir
+      const own = th.querySelector('button')
+      if (!own) continue
+      const f = th.querySelector(':scope > .lab-filter') ?? th.appendChild(Object.assign(document.createElement('span'), {
+        className: 'lab-filter', title: 'Filter',
+        innerHTML: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M7 12h10M10 18h4"/></svg>',
+        onclick: (e) => { e.stopPropagation(); passing = true; own.click(); passing = false },
+      }))
+      if (own.getAttribute('aria-pressed') === 'true') f.dataset.on = ''; else delete f.dataset.on
+    }
+    const body = t.tBodies[0]
+    const rows = [...body.rows]
+    rows.forEach((r, i) => { r.dataset.labI ??= i })
+    rows.sort((a, b) => a.dataset.labI - b.dataset.labI)
+    const data = rows.filter(isData)
+    const text = (r) => r.cells[col]?.textContent.trim()
+    const ranked = col !== undefined && data.every((r) => GLYPHS.includes(text(r)))
+    const val = (r) => ranked ? GLYPHS.indexOf(text(r)) : key(r.cells[col])
+    const next = col === undefined ? rows
+      : [...data.filter(isPinned), ...data.filter((r) => !isPinned(r)).sort((a, b) => compare(val(a), val(b), dir)), ...rows.filter((r) => !isData(r))]
+    next.forEach((r) => { if (col !== undefined && !isData(r)) r.dataset.labHide = ''; else delete r.dataset.labHide; body.append(r) })
+  })
+  mo.observe(document.body, { childList: true, subtree: true })
+}
+addEventListener('click', (e) => {
+  const th = e.target.closest?.('th[data-lab-col]')
+  if (passing || !th || e.target.closest('a, .lab-filter')) return
+  e.preventDefault()
+  e.stopPropagation()
+  const ti = tables().indexOf(th.closest('table')), x = +th.dataset.labCol, [col, dir] = sorts[ti] ?? []
+  if (col !== x) sorts[ti] = [x, 1]; else if (dir === 1) sorts[ti] = [x, -1]; else delete sorts[ti]
+  apply()
+  parent.postMessage({ sorts }, '*')
+}, true)
+addEventListener('message', (e) => { if (e.source === parent && e.data.sorts) { sorts = e.data.sorts; apply() } })
+addEventListener('load', apply)
+})()</script>`
+
 // lands after the file's CSS, so it overrides its base table rules but not its targeted ones
 const tableCss = () => {
   const s = getComputedStyle(document.documentElement)
@@ -93,13 +175,15 @@ function HtmlFile({ project, path, url }: { project: string; path: string; url: 
   const focus = useFocus()
   const frame = useRef<HTMLIFrameElement>(null)
   const pinned = JSON.stringify(usePins().flatMap((p) => (p.project === project && p.path === path && p.part ? [p.part] : [])))
-  const sync = () => frame.current?.contentWindow?.postMessage({ pinned: JSON.parse(pinned), theme, css }, '*')
+  const [sorts, setSorts] = useStored<Record<string, [number, 1 | -1]>>(`table:${project}:${path}`, {})
+  const sync = () => frame.current?.contentWindow?.postMessage({ pinned: JSON.parse(pinned), theme, css, sorts }, '*')
   useEffect(sync, [pinned, theme, css])
   useEffect(() => {
     const on = (e: MessageEvent) => {
       if (e.source === frame.current?.contentWindow && typeof e.data?.pin === 'string') {
         togglePin({ project, path, part: e.data.pin, title: `${path.split('/').pop()} · ${String(e.data.label).slice(0, 80)}` })
       }
+      if (e.source === frame.current?.contentWindow && e.data?.sorts && typeof e.data.sorts === 'object') setSorts(e.data.sorts)
     }
     addEventListener('message', on)
     return () => removeEventListener('message', on)
@@ -107,7 +191,7 @@ function HtmlFile({ project, path, url }: { project: string; path: string; url: 
   if (focus && focus.part === undefined) return null
   if (error) return <pre className="text-sm text-critical">{error}</pre>
   if (data === undefined) return <Skeleton className="h-64" />
-  const iframe = <iframe ref={frame} onLoad={sync} data-html-file srcDoc={data.replace(/<html\b/i, `<html data-theme="${initial.theme}"`) + `<style id="lab-tables">${initial.css}</style>` + pinScript(focus?.part)} title={path}
+  const iframe = <iframe ref={frame} onLoad={sync} data-html-file srcDoc={data.replace(/<html\b/i, `<html data-theme="${initial.theme}"`) + `<style id="lab-tables">${initial.css}</style>` + pinScript(focus?.part) + sortScript} title={path}
     sandbox="allow-scripts" style={{ colorScheme: theme }} className="h-[calc(100svh-8.5rem)] w-full bg-background" />
   return focus ? portal(iframe, focus.target) : iframe
 }

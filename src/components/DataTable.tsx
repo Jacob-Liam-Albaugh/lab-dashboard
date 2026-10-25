@@ -25,10 +25,14 @@ export function StatusBadge({ value }: { value: string }) {
   return <Badge variant="outline" className="gap-1"><CircleDashedIcon />{value}</Badge>
 }
 
-export const SortArrow = ({ dir }: { dir?: 1 | -1 }) =>
-  dir === 1 ? <ArrowUpIcon className="ml-1 inline size-3" />
-    : dir === -1 ? <ArrowDownIcon className="ml-1 inline size-3" />
-      : <ChevronsUpDownIcon className="ml-1 inline size-3 opacity-0 group-hover/head:opacity-50" />
+export const SortArrow = ({ dir, className = 'ml-1' }: { dir?: 1 | -1; className?: string }) =>
+  dir === 1 ? <ArrowUpIcon className={cn(className, 'inline size-3')} />
+    : dir === -1 ? <ArrowDownIcon className={cn(className, 'inline size-3')} />
+      : <ChevronsUpDownIcon className={cn(className, 'inline size-3 opacity-0 group-hover/head:opacity-50')} />
+
+export const FilterToggle = ({ on, onToggle, title, className }: { on: boolean; onToggle: () => void; title: string; className?: string }) =>
+  <button type="button" title={title} aria-pressed={on} onClick={(e) => { e.stopPropagation(); onToggle() }}
+    className={cn('rounded-sm p-0.5 text-muted-foreground hover:bg-hl aria-pressed:bg-chart-1 aria-pressed:text-card', className)}><ListFilterIcon className="size-3" /></button>
 
 // keeps missing values last whichever way the column is sorted
 export const compare = (x: string | number | undefined, y: string | number | undefined, dir: 1 | -1) =>
@@ -63,7 +67,8 @@ export function DataTable({ rows, project, base = '', onRow, highlight, render, 
   const ordered = [...kept, ...all.filter((i) => !kept.includes(i))]
   if (sort && keys.includes(sort.key)) {
     const num = rows.every((r) => r[sort.key] === '' || isNumeric(r[sort.key]))
-    ordered.sort((a, b) => sort.dir * (num ? Number(rows[a][sort.key] || NaN) - Number(rows[b][sort.key] || NaN) || 0 : rows[a][sort.key].localeCompare(rows[b][sort.key])))
+    const val = (i: number) => rows[i][sort.key] === '' ? undefined : num ? Number(rows[i][sort.key]) : rows[i][sort.key]
+    ordered.sort((a, b) => compare(val(a), val(b), sort.dir))
   }
   const q = query.trim().toLowerCase()
   const active = Object.entries(filters).filter(([k, vs]) => vs.length && keys.includes(k))
