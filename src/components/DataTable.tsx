@@ -25,6 +25,16 @@ export function StatusBadge({ value }: { value: string }) {
   return <Badge variant="outline" className="gap-1"><CircleDashedIcon />{value}</Badge>
 }
 
+export const SortArrow = ({ dir }: { dir?: 1 | -1 }) =>
+  dir === 1 ? <ArrowUpIcon className="ml-1 inline size-3" />
+    : dir === -1 ? <ArrowDownIcon className="ml-1 inline size-3" />
+      : <ChevronsUpDownIcon className="ml-1 inline size-3 opacity-0 group-hover/head:opacity-50" />
+
+// keeps missing values last whichever way the column is sorted
+export const compare = (x: string | number | undefined, y: string | number | undefined, dir: 1 | -1) =>
+  x === undefined || y === undefined ? Number(x === undefined) - Number(y === undefined)
+    : dir * (typeof x === 'string' ? x.localeCompare(String(y)) : x - Number(y))
+
 const MAX_ROWS = 1000
 const MAX_FACET = 20
 const MAX_NUMERIC_FACET = 6
@@ -125,9 +135,7 @@ export function DataTable({ rows, project, base = '', onRow, highlight, render, 
               <TableHead className="w-6 px-1" />
               {keys.map((k) => (
                 <TableHead key={k} className="group/head cursor-pointer select-none whitespace-nowrap" onClick={() => setSort(sort?.key === k ? (sort.dir === 1 ? { key: k, dir: -1 } : null) : { key: k, dir: 1 })}>
-                  {k}{sort?.key === k
-                    ? (sort.dir === 1 ? <ArrowUpIcon className="ml-1 inline size-3" /> : <ArrowDownIcon className="ml-1 inline size-3" />)
-                    : <ChevronsUpDownIcon className="ml-1 inline size-3 opacity-0 group-hover/head:opacity-50" />}
+                  {k}<SortArrow dir={sort?.key === k ? sort.dir : undefined} />
                 </TableHead>
               ))}
             </TableRow>
