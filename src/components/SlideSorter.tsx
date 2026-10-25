@@ -46,13 +46,19 @@ export function useArrange(pins: Pin[], onChange: (next: Pin[]) => void) {
     draggable: true,
     onDragStart: (e: DragEvent) => start(e, { pin: i }),
     onDragEnd: end,
-    onDragOver: (e: DragEvent) => over(e, `p${i}`, ['left', 'right', 'top', 'bottom'], (edge, d) => {
+    onDragOver: (e: DragEvent) => {
+      // hovering the dragged pin itself cancels the drop
+      if (drag && 'pin' in drag && drag.pin === i) { e.preventDefault(); e.stopPropagation(); if (aim) setAim(null); return }
+      over(e, `p${i}`, ['left', 'right', 'top', 'bottom'], (edge, d) => {
       if (!('pin' in d)) return
       if (edge === 'left' || edge === 'right') return movePin(pins, d.pin, { slide: n, column: edge === 'left' ? c : c + 1 })
       return movePin(pins, d.pin, { slide: n, column: c, row: edge === 'top' ? r : r + 1 })
-    }),
+    })
+    },
   })
   const zone = {
+    // a release in a gap still lands where the marker shows
+    onDragOver: (e: DragEvent) => { if (aim) e.preventDefault() },
     onDrop: (e: DragEvent) => { e.preventDefault(); if (aim) onChange(aim.next); end() },
     onDragLeave: (e: DragEvent) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setAim(null) },
   }
