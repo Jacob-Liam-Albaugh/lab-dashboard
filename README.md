@@ -39,6 +39,12 @@ The Runs page executes a command in the project folder through your login shell 
 streams its output. `plt.show()` calls are captured as PNGs into the dashboard's own
 `data/` folder, never the project.
 
+## Terminal
+
+Press `` Ctrl+` `` (or **Terminal** in the toolbar) for a bottom panel of real shells: each tab is a
+login shell in the current project's folder (or `~`), so `claude`, vim and htop work. Drag the top
+edge to resize.
+
 ## Present
 
 Pin any file, chart or captured figure, then open **Present** (or press `p`) for a
@@ -49,4 +55,5 @@ full-screen slide deck. Arrow keys or space move between slides, `f` toggles ful
 - The dashboard only reads project folders; its state (pins, run logs) lives in `data/`.
 - It binds to `127.0.0.1` and rejects cross-origin writes. Don't expose it on a network:
   the Runs page executes arbitrary commands.
+- The terminal gives full shell access as your user, so the dashboard must stay bound to `127.0.0.1`.
 - `make check` type-checks and runs the tests.
